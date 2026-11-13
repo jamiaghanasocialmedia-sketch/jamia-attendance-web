@@ -516,7 +516,7 @@ function personDialog(init) {
     const err = h("div", { class: "err" });
     const ids = (...g) => new Set(S.activities.filter((a) => a.active && g.includes(a.group)).map((a) => a.id));
     const draw = () => {
-      body.replaceChildren(
+      body.replaceChildren(...[
         h("input", { type: "text", placeholder: "Full name", value: f.name, oninput: (e) => (f.name = e.target.value) }),
         init ? h("div", { class: "muted" }, "Username: " + displayUsername(init.username)) : [
           h("input", { type: "text", placeholder: "Username (for sign in)", autocapitalize: "none", value: f.username, oninput: (e) => (f.username = e.target.value.replace(/ /g, "")) }),
@@ -535,7 +535,7 @@ function personDialog(init) {
         [...new Set(S.activities.filter((a) => a.active).map((a) => a.group))].map((g) => [h("div", { class: "muted" }, g), S.activities.filter((a) => a.active && a.group === g).map((a) => check(a.name, f.acts.has(a.id), (on) => (on ? f.acts.add(a.id) : f.acts.delete(a.id))))]),
         h("div", { class: "b" }, "For these classes"), check("All classes", f.all, (on) => { f.all = on; draw(); }),
         S.classes.map((c) => check(c.name, f.cls.has(c.id), (on) => (on ? f.cls.add(c.id) : f.cls.delete(c.id)), f.all)),
-        init ? check("Account active (untick to block this person)", f.active, (on) => (f.active = on)) : null);
+        init ? check("Account active (untick to block this person)", f.active, (on) => (f.active = on)) : null].flat(Infinity).filter((x) => x != null && x !== false));
     };
     draw();
     const save = h("button", { onclick: async () => {

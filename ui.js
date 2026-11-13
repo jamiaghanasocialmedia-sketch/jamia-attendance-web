@@ -1,3 +1,10 @@
+// replaceChildren / append that accept (nested) arrays and skip empty values, like h() does
+for (const m of ["replaceChildren", "append"]) {
+  const orig = Element.prototype[m];
+  Element.prototype[m] = function (...kids) {
+    return orig.apply(this, kids.flat(Infinity).filter((k) => k != null && k !== false).map((k) => (k.nodeType ? k : document.createTextNode(String(k)))));
+  };
+}
 // Tiny UI helpers.
 export function h(tag, props, ...kids) {
   const e = document.createElement(tag);
