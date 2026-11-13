@@ -1,0 +1,1579 @@
+{
+ "classes": [
+  {
+   "id": "mumahida",
+   "name": "Mumahida",
+   "order": 1
+  },
+  {
+   "id": "oola",
+   "name": "Oola",
+   "order": 2
+  },
+  {
+   "id": "sania",
+   "name": "Sania",
+   "order": 3
+  },
+  {
+   "id": "salisa",
+   "name": "Salisa",
+   "order": 4
+  },
+  {
+   "id": "rabia",
+   "name": "Rabia",
+   "order": 5
+  },
+  {
+   "id": "khamisa",
+   "name": "Khamisa",
+   "order": 6
+  },
+  {
+   "id": "shahid",
+   "name": "Shahid",
+   "order": 7
+  }
+ ],
+ "students": [
+  {
+   "id": "mumahida_01",
+   "name": "Ali Mahamat Nour Ismail",
+   "country": "Chad",
+   "aims": "",
+   "classId": "mumahida"
+  },
+  {
+   "id": "mumahida_02",
+   "name": "Khaqan Ahmad Hashmi",
+   "country": "Kenya (Pakistan)",
+   "aims": "",
+   "classId": "mumahida"
+  },
+  {
+   "id": "mumahida_03",
+   "name": "Ahmad Zeeshan Acquah",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "mumahida"
+  },
+  {
+   "id": "mumahida_04",
+   "name": "Sibtain Ahmad",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "mumahida"
+  },
+  {
+   "id": "mumahida_05",
+   "name": "Ahmad Saeed Anderson",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "mumahida"
+  },
+  {
+   "id": "mumahida_06",
+   "name": "Mohammed Ahmad Kwarteng",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "mumahida"
+  },
+  {
+   "id": "mumahida_07",
+   "name": "Masroor Mahmood",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "mumahida"
+  },
+  {
+   "id": "mumahida_08",
+   "name": "Abdul Salam Fadlullah",
+   "country": "Nigeria",
+   "aims": "",
+   "classId": "mumahida"
+  },
+  {
+   "id": "mumahida_09",
+   "name": "Nur-Ahmad Adeleke",
+   "country": "Nigeria",
+   "aims": "",
+   "classId": "mumahida"
+  },
+  {
+   "id": "mumahida_11",
+   "name": "Kashif Masood Khan",
+   "country": "UAE (Pakistan)",
+   "aims": "",
+   "classId": "mumahida"
+  },
+  {
+   "id": "mumahida_12",
+   "name": "Badar Ahmed",
+   "country": "New Zealand",
+   "aims": "",
+   "classId": "mumahida"
+  },
+  {
+   "id": "mumahida_13",
+   "name": "Kaire Abdul Mujeeb",
+   "country": "Uganda",
+   "aims": "",
+   "classId": "mumahida"
+  },
+  {
+   "id": "mumahida_14",
+   "name": "Wasswa Shakuru",
+   "country": "Uganda",
+   "aims": "",
+   "classId": "mumahida"
+  },
+  {
+   "id": "mumahida_15",
+   "name": "Tibagalika Shafiq",
+   "country": "Uganda",
+   "aims": "",
+   "classId": "mumahida"
+  },
+  {
+   "id": "mumahida_16",
+   "name": "Mohamed Osman yillah",
+   "country": "Sierra Leone",
+   "aims": "",
+   "classId": "mumahida"
+  },
+  {
+   "id": "mumahida_17",
+   "name": "Yusuf Mubarak Niyame HasiHasi",
+   "country": "Tanzania",
+   "aims": "",
+   "classId": "mumahida"
+  },
+  {
+   "id": "mumahida_20",
+   "name": "Houseifa Tidjani",
+   "country": "Niger",
+   "aims": "",
+   "classId": "mumahida"
+  },
+  {
+   "id": "mumahida_21",
+   "name": "Fousseni Lama",
+   "country": "Benin",
+   "aims": "",
+   "classId": "mumahida"
+  },
+  {
+   "id": "mumahida_22",
+   "name": "Ishola Mansrour Alamou",
+   "country": "Benin",
+   "aims": "",
+   "classId": "mumahida"
+  },
+  {
+   "id": "mumahida_23",
+   "name": "Sara Harda",
+   "country": "Benin",
+   "aims": "",
+   "classId": "mumahida"
+  },
+  {
+   "id": "oola_01",
+   "name": "Shaddad Said",
+   "country": "Tanzania",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_02",
+   "name": "Adnan Ahmad Baidoo",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_03",
+   "name": "Faizan Mahmood",
+   "country": "Sierra Leone (Pakistan)",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_04",
+   "name": "Ahsan Ahmad Durgauhee",
+   "country": "Mauritius",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_05",
+   "name": "A. Hameed A.Rahman Opeyemi",
+   "country": "Nigeria",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_06",
+   "name": "Usman A. Aleem Adekunle",
+   "country": "Nigeria",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_07",
+   "name": "Amri Ramadhan Saidi",
+   "country": "Tanzania",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_08",
+   "name": "Hasan Mehmood",
+   "country": "Ghana (Pakistan)",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_09",
+   "name": "A.Salam Fadurahman Feranmi",
+   "country": "Nigeria",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_10",
+   "name": "Mahdi Kofi Annan",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_11",
+   "name": "Mustapha Bullie",
+   "country": "Sierra Leone",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_12",
+   "name": "Mahdi Assan",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_13",
+   "name": "Mayingo Muzafaru",
+   "country": "Uganda",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_14",
+   "name": "Tonou Sikirou",
+   "country": "Benin",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_15",
+   "name": "Bashir Ruddeen Mahmood",
+   "country": "Sierra Leone",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_16",
+   "name": "Nanzige Tahir",
+   "country": "Uganda",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_17",
+   "name": "Batwawula Ahmad",
+   "country": "Uganda",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_18",
+   "name": "Muzafar Ahmad Hisamuha",
+   "country": "Uganda",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_19",
+   "name": "Magumba Ausi",
+   "country": "Uganda",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_20",
+   "name": "Abubakr Jabey",
+   "country": "Sierra Leone",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_21",
+   "name": "Nyogoli Qasid",
+   "country": "Uganda",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_22",
+   "name": "Boutroukou Mouhamandou",
+   "country": "Benin",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_23",
+   "name": "Ahamadul Masroor",
+   "country": "Philippines",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_24",
+   "name": "Toko Inayah",
+   "country": "Uganda",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_25",
+   "name": "Hassan Camara",
+   "country": "Sierra Leone",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_26",
+   "name": "Bamba Moriba",
+   "country": "Côte d'Ivoire",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_27",
+   "name": "Usmanu Baba",
+   "country": "Cameroon",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_28",
+   "name": "Ahmad Mohammad Ousman",
+   "country": "Rodrigues",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_29",
+   "name": "Yahaya Nakeba",
+   "country": "Uganda",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "oola_30",
+   "name": "Seyni Sane",
+   "country": "Senegal",
+   "aims": "",
+   "classId": "oola"
+  },
+  {
+   "id": "sania_01",
+   "name": "Nasrullah-Masroor Mohamed",
+   "country": "Tanzania",
+   "aims": "193642",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_02",
+   "name": "Traore Soualio Malcom",
+   "country": "Côte d'Ivoire",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_03",
+   "name": "Tahir Ahmad Hoolash",
+   "country": "Mauritius",
+   "aims": "193647",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_04",
+   "name": "Umar Bogere",
+   "country": "Uganda",
+   "aims": "193641",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_05",
+   "name": "Atta Ul Basit",
+   "country": "Liberia (Pakistan)",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_06",
+   "name": "Abdul Rafiq Mensah Appiah",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_07",
+   "name": "Ansumana Danso",
+   "country": "Gambia",
+   "aims": "193644",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_08",
+   "name": "Samar Ahmad Cheema",
+   "country": "Canada",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_09",
+   "name": "Hanif Ofori Kwamina Baidoo",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_10",
+   "name": "Hafiz Issah Junior Gyimah",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_11",
+   "name": "Dicko Mahamadou",
+   "country": "Central Africa",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_12",
+   "name": "Abdul Rauf Owuradu",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_13",
+   "name": "Abdul Rahman Ainooson",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_14",
+   "name": "Iddi Salumu Kapulilo",
+   "country": "Tanzania",
+   "aims": "193646",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_15",
+   "name": "James Malcolm Juma",
+   "country": "Zimbabwe",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_16",
+   "name": "Abubakarr Sheriff",
+   "country": "Sierra Leone",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_17",
+   "name": "Afful Ibrahim",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_18",
+   "name": "Ibrahima Corr",
+   "country": "Senegal",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_19",
+   "name": "Ishmael Agyeman Duah N.",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_20",
+   "name": "Ayuba Jallow",
+   "country": "Gambia",
+   "aims": "193645",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_21",
+   "name": "Lucreche Merveille Nsakala",
+   "country": "Congo Brazzaville",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_22",
+   "name": "Abdul Hakeem Arhin",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_23",
+   "name": "Lahai Kanneh",
+   "country": "Sierra Leone",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_24",
+   "name": "Nasir Ahmad",
+   "country": "Uganda",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_25",
+   "name": "Abubakar Mugabe",
+   "country": "Uganda",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_26",
+   "name": "Tomas Exequiel Acuña",
+   "country": "Argentina",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_27",
+   "name": "Osmano Sankoh",
+   "country": "Sierra Leone",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "sania_28",
+   "name": "Ibrahima Tamba",
+   "country": "Senegal",
+   "aims": "",
+   "classId": "sania"
+  },
+  {
+   "id": "salisa_01",
+   "name": "Muhammad Muqbil Al-Jamali",
+   "country": "Yemen",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_02",
+   "name": "Yasir Ahmad Tahir",
+   "country": "Ghana (Pakistan)",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_03",
+   "name": "Awsaf Ahmed",
+   "country": "Sri Lanka",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_04",
+   "name": "Juma Rashidi Mtima",
+   "country": "Tanzania",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_05",
+   "name": "Abdullah Yusuf Iddi",
+   "country": "Tanzania",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_06",
+   "name": "Fazil Zulhaq Anbanbaahe",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_07",
+   "name": "Abubakar Tahir Yusuf",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_08",
+   "name": "Tonou Adahou Abdous-Salam",
+   "country": "Benin",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_09",
+   "name": "Salman Ahmad Bin Saharuddin",
+   "country": "Malaysia",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_10",
+   "name": "Bukhari Muhammad",
+   "country": "Nigeria",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_11",
+   "name": "Alie Fofanah",
+   "country": "Sierra Leone",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_12",
+   "name": "Mustapha Assan",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_13",
+   "name": "Alusine Bamba",
+   "country": "Sierra Leone",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_14",
+   "name": "Haneef Ahmad Ibraheem",
+   "country": "Nigeria",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_15",
+   "name": "Mustapha H. Sackey",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_16",
+   "name": "Jijiri Nabeetam Yunus",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_17",
+   "name": "Muzahirallah K. Nasirdeen",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_18",
+   "name": "Bagutumbwire Tariq",
+   "country": "Uganda",
+   "aims": "190833",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_19",
+   "name": "Mustapha Muqbil Al-Jamali",
+   "country": "Yemen",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_20",
+   "name": "Mataaga Afan",
+   "country": "Uganda",
+   "aims": "190818",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_21",
+   "name": "Sulaiman Gbankay",
+   "country": "Sierra Leone",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_22",
+   "name": "Hafiz Abdul Azeez O. Bello",
+   "country": "Cameroon",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_23",
+   "name": "Bouramanding Diedhiou",
+   "country": "Senegal",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_24",
+   "name": "Abdul Hakeem Ampah",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_25",
+   "name": "Siddique Masamba",
+   "country": "Zambia",
+   "aims": "190842",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_26",
+   "name": "Baidy Traore",
+   "country": "Senegal",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_27",
+   "name": "Andrianirina Jose Danny",
+   "country": "Madagascar",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_28",
+   "name": "Abdul Aziz Bin Karim",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_29",
+   "name": "Abdulatif Mugisha",
+   "country": "Uganda",
+   "aims": "190816",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_30",
+   "name": "Abdul Fazil R. Benyin",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_31",
+   "name": "Wahab Lukumeri",
+   "country": "Uganda",
+   "aims": "190851",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_32",
+   "name": "Lwanga Innayatullah",
+   "country": "Uganda",
+   "aims": "190817",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_33",
+   "name": "Momoh Ensah",
+   "country": "Sierra Leone",
+   "aims": "190904",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_34",
+   "name": "Alshareem Talib Suhod",
+   "country": "Philippines",
+   "aims": "190852",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_35",
+   "name": "Sioga A-Khalid D.",
+   "country": "Philippines",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "salisa_36",
+   "name": "Mahar Ahmad",
+   "country": "Burkina Faso",
+   "aims": "",
+   "classId": "salisa"
+  },
+  {
+   "id": "rabia_01",
+   "name": "Badr Abdul Hafiz",
+   "country": "Nigeria",
+   "aims": "190812",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_02",
+   "name": "Sulaimon Abdul Basit Kehinde",
+   "country": "Nigeria",
+   "aims": "190913",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_03",
+   "name": "Hamza Dalabri",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_04",
+   "name": "Jamal Ewudzie",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_05",
+   "name": "Tonou Abdul Qudus",
+   "country": "Benin",
+   "aims": "",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_06",
+   "name": "Taiwo Yusuf",
+   "country": "Nigeria",
+   "aims": "190883",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_07",
+   "name": "Abdul Majid Osei",
+   "country": "Ghana",
+   "aims": "190831",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_08",
+   "name": "Salif Kanazoe",
+   "country": "Burkina Faso",
+   "aims": "190847",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_09",
+   "name": "Ibrahim Tshitenge",
+   "country": "DR Congo",
+   "aims": "190859",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_10",
+   "name": "Bashir Morris Kamara",
+   "country": "Sierra Leone",
+   "aims": "190863",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_11",
+   "name": "Ibrahim Hamza",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_12",
+   "name": "Barbarinde AbdulBasit",
+   "country": "Cameroon",
+   "aims": "190808",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_13",
+   "name": "Adebayo Mahmud Ahmad",
+   "country": "Nigeria",
+   "aims": "190925",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_14",
+   "name": "Savadogo Sayouba",
+   "country": "Burkina Faso",
+   "aims": "190861",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_15",
+   "name": "Modou Ceesay",
+   "country": "The Gambia",
+   "aims": "190858",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_16",
+   "name": "Saleh Rajab Mukabana",
+   "country": "Kenya",
+   "aims": "190853",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_17",
+   "name": "Muhammad Ba",
+   "country": "Senegal",
+   "aims": "190862",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_18",
+   "name": "Bakare Abdulaziz",
+   "country": "Nigeria",
+   "aims": "190809",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_19",
+   "name": "Issa Amadou Hamidou",
+   "country": "Niger",
+   "aims": "",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_20",
+   "name": "Hamad Salum Lungipaa",
+   "country": "Tanzania",
+   "aims": "",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_21",
+   "name": "Iddi Tamimu Iddi",
+   "country": "Tanzania",
+   "aims": "190841",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_22",
+   "name": "Luqman Ibrahim Boateng",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_23",
+   "name": "Abdul Hakim Dawud",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_24",
+   "name": "Wiiyor Wisikabala Abdul-Manaf",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_25",
+   "name": "Zeeshan Hashir Nasir",
+   "country": "Burkina Faso (Pakistan)",
+   "aims": "190848",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_26",
+   "name": "Sanusi Yusuf Abiola",
+   "country": "Nigeria",
+   "aims": "190850",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_27",
+   "name": "Issah Amadou",
+   "country": "Cameroon",
+   "aims": "190810",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_28",
+   "name": "Mussa Iussuf Conté",
+   "country": "Guinea-Bissau",
+   "aims": "190866",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_29",
+   "name": "Abdullah Ali Bangora",
+   "country": "Sierra Leone",
+   "aims": "",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_30",
+   "name": "Lawal Uthman Abiola",
+   "country": "Nigeria",
+   "aims": "190882",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_31",
+   "name": "Tahir Ahmad Aw",
+   "country": "Senegal",
+   "aims": "190865",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_32",
+   "name": "Botsy Ali",
+   "country": "Madagascar",
+   "aims": "190849",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_33",
+   "name": "Albashir Torres Sioga",
+   "country": "Philippines",
+   "aims": "190854",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_34",
+   "name": "Adeel Ahmed Tahir",
+   "country": "Sierra Leone (Pakistan)",
+   "aims": "190826",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_35",
+   "name": "Hamzat Ibrahim Ayomide",
+   "country": "Nigeria",
+   "aims": "190886",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_36",
+   "name": "Ibrahim Koomson",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_37",
+   "name": "Hamidou Boukari Oumarou",
+   "country": "Niger",
+   "aims": "190844",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_38",
+   "name": "Yakubu Abdul Hafiz",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_39",
+   "name": "George Issa Bangs",
+   "country": "Liberia",
+   "aims": "183609",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_40",
+   "name": "Omolaja Sultan Ul Haqq M",
+   "country": "Nigeria",
+   "aims": "190822",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_41",
+   "name": "Ataoul Salam Salick Gueye",
+   "country": "Senegal",
+   "aims": "190824",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_42",
+   "name": "Abdulbasit Buabeng",
+   "country": "Ghana",
+   "aims": "190832",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_43",
+   "name": "Muhammad Sadic Albentine",
+   "country": "Philippines",
+   "aims": "190825",
+   "classId": "rabia"
+  },
+  {
+   "id": "rabia_44",
+   "name": "Ayodeji Kamaldeen",
+   "country": "Nigeria",
+   "aims": "190868",
+   "classId": "rabia"
+  },
+  {
+   "id": "khamisa_01",
+   "name": "Hafiz Ridwanganiy Nafiu",
+   "country": "Nigeria",
+   "aims": "190895",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_02",
+   "name": "Ridwanullahi Mugniy Nafiu",
+   "country": "Nigeria",
+   "aims": "190843",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_03",
+   "name": "Marghoob Cheema",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_04",
+   "name": "Mubiru Ashraf",
+   "country": "Uganda",
+   "aims": "190830",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_05",
+   "name": "Samir Ahmad Ahmadi",
+   "country": "Afghanistan",
+   "aims": "190827",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_06",
+   "name": "Abdul Rokeeb Akinroye",
+   "country": "Nigeria",
+   "aims": "190912",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_07",
+   "name": "Kato Muhammad",
+   "country": "Uganda",
+   "aims": "190840",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_08",
+   "name": "Hafiz Ibrahim Adam",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_09",
+   "name": "Kaire Abdul Rahman",
+   "country": "Uganda",
+   "aims": "190905",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_10",
+   "name": "Sana Camara",
+   "country": "Guinea-Bissau",
+   "aims": "190867",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_11",
+   "name": "Habib Ibrahim Ayya",
+   "country": "Nigeria",
+   "aims": "",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_12",
+   "name": "Sadou Amadou Hamidou",
+   "country": "Niger",
+   "aims": "190811",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_13",
+   "name": "Fazil Botwenin Addo",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_14",
+   "name": "Abdul Malik Amoadu",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_15",
+   "name": "Syed Tamsil Ahmad",
+   "country": "Afghanistan",
+   "aims": "190839",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_16",
+   "name": "Adenusi Muhammad-Qudus",
+   "country": "Nigeria",
+   "aims": "190890",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_17",
+   "name": "Dicko Hizikilou",
+   "country": "Benin",
+   "aims": "190864",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_18",
+   "name": "Yedu Bin Ibrahim",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_19",
+   "name": "Ali Ahmad Ahmad",
+   "country": "Afghanistan",
+   "aims": "190915",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_20",
+   "name": "Idd Shaban",
+   "country": "Tanzania",
+   "aims": "",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_21",
+   "name": "Sajeel Ahmad Ahmadi",
+   "country": "Afghanistan",
+   "aims": "190856",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_22",
+   "name": "Abdul Muqeet Oyetunji",
+   "country": "Nigeria",
+   "aims": "190909",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_23",
+   "name": "Mwanje Edris",
+   "country": "Uganda",
+   "aims": "",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_24",
+   "name": "Raziki Magoola",
+   "country": "Uganda",
+   "aims": "190813",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_25",
+   "name": "Suleman Bin Adam",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_26",
+   "name": "Kassim Bin Elias Jnr",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_27",
+   "name": "Daramola Mohammad-Fadeel",
+   "country": "Nigeria",
+   "aims": "190898",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_28",
+   "name": "Shaban Ssentongo",
+   "country": "Uganda",
+   "aims": "190814",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_29",
+   "name": "Ibrahim Sadick",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_30",
+   "name": "Abdul Majeed Kojo Buabeng",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_31",
+   "name": "Sayed Imran Ahmad Ahmadi",
+   "country": "Afghanistan",
+   "aims": "190914",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_32",
+   "name": "Yakeen Khodabux",
+   "country": "Mauritius",
+   "aims": "190884",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_33",
+   "name": "Foday Saidy",
+   "country": "The Gambia",
+   "aims": "183599",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_34",
+   "name": "Alasana Singhateh",
+   "country": "The Gambia",
+   "aims": "169768",
+   "classId": "khamisa"
+  },
+  {
+   "id": "khamisa_35",
+   "name": "Shams Shukran",
+   "country": "Afghanistan",
+   "aims": "",
+   "classId": "khamisa"
+  },
+  {
+   "id": "shahid_01",
+   "name": "Ariyo Fadlul-Muqsit",
+   "country": "Nigeria",
+   "aims": "190821",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_02",
+   "name": "Ajimoti Fawaz Olusoji",
+   "country": "Nigeria",
+   "aims": "190819",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_03",
+   "name": "Zinedine Bhugeloo",
+   "country": "Mauritius",
+   "aims": "",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_04",
+   "name": "Muhammad Rayyan Taujoo",
+   "country": "Mauritius",
+   "aims": "190897",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_05",
+   "name": "Hafiz Thabit Balogun",
+   "country": "Nigeria",
+   "aims": "190815",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_06",
+   "name": "Mouhamed El Bachire Ballo",
+   "country": "Mali",
+   "aims": "190889",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_07",
+   "name": "Yahya Fatty",
+   "country": "The Gambia",
+   "aims": "190855",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_08",
+   "name": "Soretire Mughni",
+   "country": "Nigeria",
+   "aims": "190887",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_09",
+   "name": "Fadlul Hakeem Ahmad Ariyo",
+   "country": "Nigeria",
+   "aims": "190907",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_10",
+   "name": "Ahmad Ouattara",
+   "country": "Mali",
+   "aims": "190870",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_11",
+   "name": "Ibrahim Bonsu Karikari",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_12",
+   "name": "Ali B Kanu",
+   "country": "Sierra Leone",
+   "aims": "190869",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_13",
+   "name": "Muhammad Sambolah",
+   "country": "Liberia",
+   "aims": "",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_14",
+   "name": "Sulaiman Egyir Junior",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_15",
+   "name": "Ishmael Kobi",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_16",
+   "name": "Abdul Shakur Adam",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_17",
+   "name": "Yakub Asante",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_18",
+   "name": "Ahmad Masroor Singbah",
+   "country": "Liberia",
+   "aims": "190894",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_19",
+   "name": "Mohammed Junior Agbeve",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_20",
+   "name": "Abdul Hameed Asante",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_21",
+   "name": "Anees Ahmad",
+   "country": "The Gambia (Pakistan)",
+   "aims": "190881",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_22",
+   "name": "Hafiiz Rahman Dzakatoh",
+   "country": "Ghana",
+   "aims": "",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_23",
+   "name": "Ramadhan Salum Juma",
+   "country": "Tanzania",
+   "aims": "190908",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_24",
+   "name": "Abdul Karim Yahya Mgeleka",
+   "country": "Tanzania",
+   "aims": "190903",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_25",
+   "name": "Mahad Katumba",
+   "country": "Uganda",
+   "aims": "183605",
+   "classId": "shahid"
+  },
+  {
+   "id": "shahid_26",
+   "name": "Gassama Ebrima",
+   "country": "The Gambia",
+   "aims": "169755",
+   "classId": "shahid"
+  }
+ ],
+ "removed": [
+  "mumahida_10",
+  "mumahida_18",
+  "mumahida_19"
+ ]
+}
