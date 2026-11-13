@@ -28,7 +28,7 @@ const friendly = (e) => {
 
 // ---------- Firestore -> model ----------
 const arr = (v) => (Array.isArray(v) ? v : []);
-const mUser = (d) => { const x = d.data(); return { uid: d.id, name: x.name || "", username: x.username || "", role: x.role || "taker", activities: arr(x.activities), classes: arr(x.classes), active: x.active !== false, canEnterDuty: !!x.canEnterDuty, canClinic: !!x.canClinic, canLeave: !!x.canLeave }; };
+const mUser = (d) => { const x = d.data(); return { uid: d.id, name: x.name || "", username: x.username || "", role: x.role || "taker", activities: arr(x.activities), classes: arr(x.classes), active: x.active !== false, canEnterDuty: !!x.canEnterDuty, canClinic: !!x.canClinic, canLeave: !!x.canLeave, canCompetitions: !!x.canCompetitions }; };
 const mClass = (d) => ({ id: d.id, name: d.data().name || d.id, order: d.data().order || 0 });
 const mStudent = (d) => { const x = d.data(); return { id: d.id, name: x.name || "", country: x.country || "", aims: x.aims || "", classId: x.classId || "", active: x.active !== false }; };
 const mActivity = (d) => { const x = d.data(); return { id: d.id, name: x.name || d.id, group: x.group || "", type: x.type || "attendance", order: x.order || 0, active: x.active !== false, multi: !!x.multi }; };
@@ -119,17 +119,20 @@ function startData(u) {
   L(collection(db, "students"), (s) => { S.students = s.docs.map(mStudent); render(); });
   L(collection(db, "activities"), (s) => { S.activities = s.docs.map(mActivity).sort((a, b) => a.order - b.order); render(); });
   L(doc(db, "config", "dutyRules"), (s) => { const x = s.data(); S.dutyRules = s.exists() ? { day: arr(x.day), night: arr(x.night), nightNext: arr(x.nightNext) } : C.DEFAULT_DUTY_RULES; render(); });
+  L(doc(db, "config", "academicYear"), (s) => { const x = s.data(); S.academicYear = s.exists() && x.sm ? { sm: x.sm, sd: x.sd, em: x.em, ed: x.ed } : C.DEFAULT_ACADEMIC_YEAR; render(); });
   L(collection(db, "duty"), (s) => { S.dutyDays = {}; for (const d of s.docs) S.dutyDays[d.id] = { day: arr(d.data().day), night: arr(d.data().night) }; render(); });
   L(collection(db, "sports_exempt"), (s) => { S.sportsEx = s.docs.map((d) => ({ id: d.id, studentId: d.data().studentId || "", kind: d.data().kind || "duty", from: d.data().from || "", to: d.data().to || "", note: d.data().note || "" })); render(); });
   L(collection(db, "clinic"), (s) => { S.clinic = s.docs.map((d) => { const x = d.data(); return { id: d.id, studentId: x.studentId || "", classId: x.classId || "", date: x.date || "", ailments: arr(x.ailments), place: x.place || "hostel", by: x.by || "", byUid: x.byUid || "" }; }); render(); });
   L(collection(db, "leaves"), (s) => { S.leaves = s.docs.map((d) => { const x = d.data(); return { id: d.id, studentId: x.studentId || "", classId: x.classId || "", reason: x.reason || "personal", from: x.from || "", to: x.to || "", by: x.by || "", byUid: x.byUid || "" }; }); render(); });
+  L(collection(db, "competitions"), (s) => { S.competitions = s.docs.map((d) => ({ id: d.id, name: d.data().name || d.id, active: d.data().active !== false, order: d.data().order || 0 })).sort((a, b) => a.order - b.order); render(); });
+  L(collection(db, "competition_results"), (s) => { S.compResults = s.docs.map((d) => { const x = d.data(); return { id: d.id, date: x.date || "", competitionId: x.competitionId || "", name: x.name || "", p1: arr(x.p1), p2: arr(x.p2), p3: arr(x.p3), by: x.by || "", byUid: x.byUid || "" }; }); render(); });
   L(doc(db, "config", "leaveRules"), (s) => { const x = s.data(), d = C.DEFAULT_LEAVE_RULES; S.leaveRules = s.exists() ? { thu: Array.isArray(x.thu) ? x.thu : d.thu, fri: Array.isArray(x.fri) ? x.fri : d.fri, sat: Array.isArray(x.sat) ? x.sat : d.sat } : d; render(); });
   L(doc(db, "users", u.uid), (s) => { if (s.exists()) { S.me = mUser(s); render(); } });
   if (u.role === "housemaster") L(collection(db, "users"), (s) => { S.users = s.docs.map(mUser); render(); });
 }
 function stopData() {
   regs.forEach((r) => r()); regs = [];
-  Object.assign(S, { me: null, classes: [], students: [], activities: [], users: [], dutyRules: C.DEFAULT_DUTY_RULES, dutyDays: {}, sportsEx: [], clinic: [], leaves: [], leaveRules: C.DEFAULT_LEAVE_RULES });
+  Object.assign(S, { me: null, classes: [], students: [], activities: [], users: [], dutyRules: C.DEFAULT_DUTY_RULES, dutyDays: {}, sportsEx: [], clinic: [], leaves: [], leaveRules: C.DEFAULT_LEAVE_RULES, competitions: [], compResults: [], academicYear: C.DEFAULT_ACADEMIC_YEAR });
   liveStop();
 }
 // sessions for one date / one sheet
@@ -256,6 +259,7 @@ function takerRoot() {
   if (v.name === "duty") return dutyScreen(() => go("home"));
   if (v.name === "leave") return leaveScreen(() => go("home"));
   if (v.name === "clinic") return clinicScreen(() => go("home"));
+  if (v.name === "comps") return compsScreen(() => go("home"));
   if (v.name === "sports") return sportsScreen(() => go("home"));
   if (v.name === "picker") return sessionPicker(v);
   if (v.name === "roster") return rosterView(v);
@@ -273,8 +277,9 @@ function takerRoot() {
       me.canEnterDuty ? box("Security duty", () => go("duty"), "Enter who is on Day duty and Night duty.") : null,
       me.canLeave ? box("Leave", () => go("leave")) : null,
       me.canClinic ? box("Sick Leave", () => go("clinic")) : null,
+      me.canCompetitions ? box("Majlis-e-Ilmi competitions", () => go("comps")) : null,
       me.activities.includes(C.SPORTS_ID) ? box("Duty & Permissions", () => go("sports")) : null,
-      (!myActs.length || !myCls.length) && !me.canEnterDuty && !me.canClinic && !me.canLeave ? h("div", { class: "err" }, "No activities or classes are assigned to your account yet. Please ask the housemaster.") : null,
+      (!myActs.length || !myCls.length) && !me.canEnterDuty && !me.canClinic && !me.canLeave && !me.canCompetitions ? h("div", { class: "err" }, "No activities or classes are assigned to your account yet. Please ask the housemaster.") : null,
       myActs.length && myCls.length ? [
         h("div", { class: "b" }, "1. Date"), dateRow(v.date, (d) => { v.date = d; render(); }),
         h("div", { class: "b" }, "2. What are you recording?"),
@@ -390,6 +395,7 @@ function hmRoot() {
   if (v.name === "leave") return leaveScreen(() => go("home", { tab: "more" }));
   if (v.name === "leaveRules") return leaveRulesScreen(() => go("home", { tab: "more" }));
   if (v.name === "sports") return sportsScreen(() => go("home", { tab: "more" }));
+  if (v.name === "comps") return compsScreen(() => go("home", { tab: "more" }));
   v.tab ||= "today";
   const body = { today: todayTab, students: studentsTab, people: peopleTab, reports: reportsTab, more: moreTab }[v.tab](v);
   return h("div", {}, appBar("Housemaster", S.me.name), body, navBar(tabs, v.tab, (t) => { go("home", { tab: t }); }));
@@ -489,23 +495,23 @@ function peopleTab(v) {
   return h("div", { class: "pad" }, h("button", { onclick: () => personDialog(null) }, "Add person"),
     h("div", { class: "muted" }, "Each person can only record the activities and classes you tick for them."),
     people.map((p) => h("div", { class: "card tap", onclick: () => personDialog(p) },
-      h("div", { class: "b" }, p.name + (p.canEnterDuty ? "   (enters duty list)" : "") + (p.canClinic ? "   (Jamia Clinic)" : "") + (p.canLeave ? "   (Leave)" : "") + (p.active ? "" : "   [inactive]")),
+      h("div", { class: "b" }, p.name + (p.canEnterDuty ? "   (enters duty list)" : "") + (p.canClinic ? "   (Jamia Clinic)" : "") + (p.canLeave ? "   (Leave)" : "") + (p.canCompetitions ? "   (Competitions)" : "") + (p.active ? "" : "   [inactive]")),
       h("div", { class: "muted" }, "Username: " + displayUsername(p.username)),
       h("div", { class: "muted" }, "Records: " + (p.activities.map((i) => A[i]).filter(Boolean).join(", ") || "nothing")),
       h("div", { class: "muted" }, "Classes: " + (p.classes.includes("*") ? "All classes" : p.classes.map((i) => K[i]).filter(Boolean).join(", ") || "none")))));
 }
-async function createTaker(name, username, password, activities, classes, canEnterDuty, canClinic, canLeave) {
+async function createTaker(name, username, password, activities, classes, canEnterDuty, canClinic, canLeave, canCompetitions) {
   let app2; try { app2 = (await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js")).getApp("secondary"); } catch { app2 = initializeApp(firebaseConfig, "secondary"); }
   const a2 = getAuth(app2), email = emailFor(username);
   const uid = (await createUserWithEmailAndPassword(a2, email, password)).user.uid;
   await signOut(a2);
-  await setDoc(doc(db, "users", uid), { name: name.trim(), username: email, role: "taker", active: true, activities, classes, canEnterDuty, canClinic, canLeave });
+  await setDoc(doc(db, "users", uid), { name: name.trim(), username: email, role: "taker", active: true, activities, classes, canEnterDuty, canClinic, canLeave, canCompetitions });
 }
 function personDialog(init) {
   modal((close) => {
     const f = { name: init ? init.name : "", username: init ? displayUsername(init.username) : "", password: "", acts: new Set(init ? init.activities : []),
       all: init ? init.classes.includes("*") : false, cls: new Set(init ? init.classes.filter((c) => c !== "*") : []), duty: init ? init.canEnterDuty : false,
-      clinic: init ? init.canClinic : false, leave: init ? init.canLeave : false, active: init ? init.active : true };
+      clinic: init ? init.canClinic : false, leave: init ? init.canLeave : false, comp: init ? init.canCompetitions : false, active: init ? init.active : true };
     const body = h("div", { class: "pad", style: { padding: 0 } });
     const err = h("div", { class: "err" });
     const ids = (...g) => new Set(S.activities.filter((a) => a.active && g.includes(a.group)).map((a) => a.id));
@@ -520,10 +526,11 @@ function personDialog(init) {
           [["Salat taker", () => { f.acts = ids("Prayers", "Class"); f.all = false; }], ["Assembly", () => { f.acts = ids("Assemblies"); f.all = true; }],
            ["Programs", () => { f.acts = ids("Programs", "Inspection"); f.all = true; }], ["Sports", () => { f.acts = ids("Sports"); f.all = true; }],
            ["Duty list only", () => { f.acts = new Set(); f.all = false; f.cls = new Set(); f.duty = true; }],
-           ["Jamia Clinic", () => { f.acts = new Set(); f.all = false; f.cls = new Set(); f.duty = false; f.clinic = true; f.leave = false; }],
-           ["Leave", () => { f.acts = new Set(); f.all = false; f.cls = new Set(); f.duty = false; f.clinic = false; f.leave = true; }]]
+           ["Jamia Clinic", () => { f.acts = new Set(); f.all = false; f.cls = new Set(); f.duty = false; f.clinic = true; f.leave = false; f.comp = false; }],
+           ["Leave", () => { f.acts = new Set(); f.all = false; f.cls = new Set(); f.duty = false; f.clinic = false; f.leave = true; f.comp = false; }],
+           ["Competitions", () => { f.acts = new Set(); f.all = false; f.cls = new Set(); f.duty = false; f.clinic = false; f.leave = false; f.comp = true; }]]
             .map(([l, fn]) => h("button", { class: "o", onclick: () => { fn(); draw(); } }, l))),
-        check("Can enter the security duty list", f.duty, (on) => (f.duty = on)), check("Jamia Clinic (records Sick Leave)", f.clinic, (on) => (f.clinic = on)), check("Leave (records Jamia off-campus leave)", f.leave, (on) => (f.leave = on)),
+        check("Can enter the security duty list", f.duty, (on) => (f.duty = on)), check("Jamia Clinic (records Sick Leave)", f.clinic, (on) => (f.clinic = on)), check("Leave (records Jamia off-campus leave)", f.leave, (on) => (f.leave = on)), check("Competitions (enters Majlis-e-Ilmi results)", f.comp, (on) => (f.comp = on)),
         h("div", { class: "b" }, "Can record"),
         [...new Set(S.activities.filter((a) => a.active).map((a) => a.group))].map((g) => [h("div", { class: "muted" }, g), S.activities.filter((a) => a.active && a.group === g).map((a) => check(a.name, f.acts.has(a.id), (on) => (on ? f.acts.add(a.id) : f.acts.delete(a.id))))]),
         h("div", { class: "b" }, "For these classes"), check("All classes", f.all, (on) => { f.all = on; draw(); }),
@@ -533,13 +540,13 @@ function personDialog(init) {
     draw();
     const save = h("button", { onclick: async () => {
       const canRec = f.acts.size && (f.all || f.cls.size);
-      if (!f.name.trim() || !(canRec || f.duty || f.clinic || f.leave)) { err.textContent = "Add a name and at least one thing this person can do."; return; }
+      if (!f.name.trim() || !(canRec || f.duty || f.clinic || f.leave || f.comp)) { err.textContent = "Add a name and at least one thing this person can do."; return; }
       if (!init && (f.username.trim().length < 3 || f.password.length < 6)) { err.textContent = "Username 3+ characters and password 6+ characters."; return; }
       save.disabled = true; err.textContent = "";
       const classes = f.all ? ["*"] : [...f.cls];
       try {
-        if (!init) await createTaker(f.name, f.username, f.password, [...f.acts], classes, f.duty, f.clinic, f.leave);
-        else await updateDoc(doc(db, "users", init.uid), { name: f.name.trim(), activities: [...f.acts], classes, canEnterDuty: f.duty, canClinic: f.clinic, canLeave: f.leave, active: f.active });
+        if (!init) await createTaker(f.name, f.username, f.password, [...f.acts], classes, f.duty, f.clinic, f.leave, f.comp);
+        else await updateDoc(doc(db, "users", init.uid), { name: f.name.trim(), activities: [...f.acts], classes, canEnterDuty: f.duty, canClinic: f.clinic, canLeave: f.leave, canCompetitions: f.comp, active: f.active });
         close();
       } catch (e) { err.textContent = friendly(e); save.disabled = false; }
     } }, "Save");
@@ -625,12 +632,14 @@ function moreTab(v) {
   const box = (t, d, ...btns) => h("div", { class: "card" }, h("div", { class: "b" }, t), d ? h("div", { class: "muted" }, d) : null, h("div", { class: "row wrap", style: { marginTop: "8px" } }, btns));
   return h("div", { class: "pad" },
     box("Duty & Permissions", "", h("button", { class: "o", onclick: () => go("sports") }, "Open")),
+    box("Majlis-e-Ilmi competitions", "Enter results: 1st, 2nd, 3rd.", h("button", { class: "o", onclick: () => go("comps") }, "Open")),
     box("Security duty list", "Who is on Day / Night duty.", h("button", { class: "o", onclick: () => go("duty") }, "Open")),
     box("Jamia off-campus leave", "", h("button", { class: "o", onclick: () => go("leave") }, "Open"), h("button", { class: "o", onclick: () => go("leaveRules") }, "Leave rules")),
     box("Class list", "Load the 2026-2027 class list and the Jamia Classes / Study Time activities.", h("button", { class: "o", disabled: v.syncing, onclick: () => confirmBox("Update class list?",
       "This loads the 2026-2027 class list: it adds new students, corrects names and countries, archives students who left (their records are kept) and adds Jamia Classes and Study Time if they are missing. AIMS numbers you typed are not touched.", "Update",
       async () => { v.syncing = true; v.syncMsg = ""; render(); try { v.syncMsg = await syncSeed(); } catch (e) { v.syncMsg = friendly(e); } v.syncing = false; render(); }) }, v.syncing ? "Updating..." : "Update class list"),
       v.syncMsg ? h("div", { class: "b" }, v.syncMsg) : null),
+    box("Academic year", `Yearly reports follow these dates. Now: ${C.ayText(S.academicYear)}.`, h("button", { class: "o", onclick: academicYearDialog }, "Set academic year")),
     box("Admin code", "Needed to correct or delete a submitted sheet.", h("button", { class: "o", onclick: changeCodeDialog }, "Change admin code")),
     box("Duty exemptions", "Which activities security duty excuses (Day duty, Night duty, and the morning after Night duty).", h("button", { class: "o", onclick: dutyRulesDialog }, "Edit duty exemptions")),
     h("div", { class: "row" }, h("div", { class: "b grow" }, "Activities"), h("button", { class: "o", onclick: () => activityDialog(null) }, "Add activity")),
@@ -655,6 +664,21 @@ async function syncSeed() {
   }
   for (let i = 0; i < ops.length; i += 400) { const b = writeBatch(db); ops.slice(i, i + 400).forEach((f) => f(b)); await b.commit(); }
   return `Done: ${added} students added, ${changed} corrected, ${archived} archived, ${newActs} activities added.`;
+}
+function academicYearDialog() {
+  modal((close) => {
+    const M = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"], ay = S.academicYear;
+    const mk = (v) => { const el = h("select", {}, M.map((m, i) => h("option", { value: i + 1 }, m))); el.value = String(v); return el; };
+    const dk = (v) => h("input", { type: "number", min: 1, max: 31, value: v, style: "width:70px" });
+    const sm = mk(ay.sm), sd = dk(ay.sd), em = mk(ay.em), ed = dk(ay.ed), err = h("div", { class: "err" });
+    return [h("h3", {}, "Academic year"), h("div", { class: "muted" }, "Starts on"), h("div", { class: "row" }, sm, sd), h("div", { class: "muted" }, "Ends on"), h("div", { class: "row" }, em, ed), err,
+      h("div", { class: "row" }, h("button", { class: "o", onclick: close }, "Cancel"), h("div", { class: "grow" }),
+        h("button", { onclick: async () => {
+          const v = { sm: +sm.value, sd: +sd.value, em: +em.value, ed: +ed.value };
+          if (![v.sd, v.ed].every((d) => d >= 1 && d <= 31)) { err.textContent = "Days must be 1 to 31."; return; }
+          await setDoc(doc(db, "config", "academicYear"), v); toast("Saved."); close();
+        } }, "Save"))];
+  });
 }
 function changeCodeDialog() {
   modal((close) => {
@@ -762,7 +786,7 @@ function leaveScreen(back) {
   const current = S.leaves.filter((l) => l.to >= today).sort((a, b) => a.from.localeCompare(b.from) || ((B[a.studentId] || {}).name || "").toLowerCase().localeCompare(((B[b.studentId] || {}).name || "").toLowerCase()));
   const canDelete = (l) => isHM() || l.byUid === S.me.uid;
   return h("div", {}, appBar("Jamia off-campus leave", S.me.name, { back }), h("div", { class: "pad" },
-    h("div", { class: "b" }, "Reason"), chips([[C.LEAVE_LAST_SATURDAY, "Last Saturday Leave"], [C.LEAVE_PERSONAL, "Personal leave"], [C.LEAVE_SICK, "Sick leave"]], v.reason, setReason),
+    h("div", { class: "b" }, "Reason"), chips([[C.LEAVE_LAST_SATURDAY, "Last Saturday Leave"], [C.LEAVE_PERSONAL, "Personal leave"], [C.LEAVE_SICK, "Sick leave"], [C.LEAVE_DUTY, "Duty off-campus leave"], [C.LEAVE_SUMMER, "Summer Holidays"]], v.reason, setReason),
     h("div", { class: "b" }, "From"), dateRow(v.from, (d) => { v.from = d; if (v.to < d) v.to = d; render(); }), h("div", { class: "b" }, "To"), dateRow(v.to, (d) => { v.to = d; render(); }),
     v.to < v.from ? h("div", { class: "err" }, "The last day must not be before the first day.") : null,
     h("div", { class: "b" }, `Students (${v.picked.size} picked)`), pickStudents(v, "picked"),
@@ -849,3 +873,80 @@ function addSportsDialog(kind) {
   });
 })();
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+
+// ---------- Majlis-e-Ilmi competitions ----------
+function compsScreen(back) {
+  const v = view, B = byId();
+  if (!v.init) { v.init = true; v.date = C.todayStr(); v.compId = ""; v.p = { 1: [], 2: [], 3: [] }; v.editing = null; }
+  const comps = S.competitions.filter((c) => c.active);
+  const names = (ids) => ids.map((i) => (B[i] || {}).name).filter(Boolean).join(", ");
+  const todays = S.compResults.filter((r) => r.date === v.date).sort((a, b) => a.name.localeCompare(b.name));
+  if (!S.competitions.length && (isHM() || S.me.canCompetitions) && !v.seeded) {
+    v.seeded = true;
+    const b = writeBatch(db); C.DEFAULT_COMPETITIONS.forEach((n, i) => b.set(doc(db, "competitions", "c" + (i + 1)), { name: n, active: true, order: i + 1 })); b.commit();
+  }
+  const clear = () => { v.compId = ""; v.p = { 1: [], 2: [], 3: [] }; v.editing = null; };
+  const comp = comps.find((c) => c.id === v.compId);
+  const taken = [...v.p[1], ...v.p[2], ...v.p[3]];
+  const place = (n) => h("div", { class: "card" }, h("div", { class: "b" }, C.placeLabel(n) + " position"),
+    v.p[n].length ? null : h("div", { class: "muted" }, "Nobody added yet."),
+    v.p[n].map((id) => h("div", { class: "row" }, h("div", { class: "grow" }, h("div", { class: "b" }, (B[id] || {}).name || id), h("div", { class: "muted" }, clsName((B[id] || {}).classId))),
+      h("button", { class: "t", onclick: () => { v.p[n] = v.p[n].filter((x) => x !== id); render(); } }, "Remove"))),
+    h("button", { class: "o", onclick: () => pickCompStudent(n) }, "Add student"));
+  const pickCompStudent = (n) => modal((close) => {
+    const f = { cid: null, q: "" }, info = h("div", { class: "b" });
+    // tapping a student adds him straight away
+    const add = (id) => { for (const k of [1, 2, 3]) v.p[k] = v.p[k].filter((x) => x !== id); v.p[n].push(id); info.textContent = "Added: " + (B[id] || {}).name; render(); };
+    const wrap = h("div", {});
+    const redraw = () => {
+      wrap.replaceChildren(info);
+      const ae = document.activeElement, k = ae && ae.dataset && ae.dataset.k, pos = ae && ae.selectionStart;
+      const cid = f.cid || (S.classes[0] || {}).id, q = (f.q || "").trim().toLowerCase();
+      const list = (q ? S.students.filter((s) => s.name.toLowerCase().includes(q)) : S.students.filter((s) => s.classId === cid)).filter((s) => s.active).sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase())).slice(0, 60);
+      wrap.append(h("div", { class: "pad", style: { padding: 0 } }, input("cq", { placeholder: "Search by name", value: f.q, oninput: (e) => { f.q = e.target.value; redraw(); } }),
+        q ? null : chips(S.classes.map((c) => [c.id, c.name]), cid, (id) => { f.cid = id; redraw(); }),
+        list.map((s) => h("div", { class: "stu", onclick: () => add(s.id) }, h("div", { class: "grow" }, h("div", { class: "b" }, s.name), q ? h("div", { class: "muted" }, clsName(s.classId)) : null), h("span", { class: "pill", style: { background: "#EDE8DB" } }, "Add")))));
+      if (k) { const el = document.querySelector(`#overlay [data-k="${k}"]`); if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch {} } }
+    };
+    redraw();
+    return [h("h3", {}, "Add student - " + C.placeLabel(n)), wrap, h("div", { class: "row" }, h("div", { class: "grow" }), h("button", { onclick: close }, "Done"))];
+  });
+  return h("div", {}, appBar("Majlis-e-Ilmi results", S.me.name, { back }), h("div", { class: "pad" },
+    h("div", { class: "b" }, "Date"), dateRow(v.date, (d) => { v.date = d; render(); }),
+    h("div", { class: "row" }, h("div", { class: "b grow" }, "Competition"), h("button", { class: "t", onclick: manageComps }, "Add / remove competitions")),
+    h("select", { onchange: (e) => { v.compId = e.target.value; } }, h("option", { value: "" }, "Choose a competition"), comps.map((c) => h("option", { value: c.id, selected: c.id === v.compId }, c.name))),
+    place(1), place(2), place(3),
+    v.msg ? h("div", { class: "b" }, v.msg) : null,
+    h("button", { disabled: !(comp && taken.length), onclick: async () => {
+      const id = v.editing || doc(collection(db, "competition_results")).id;
+      try {
+        await setDoc(doc(db, "competition_results", id), { date: v.date, competitionId: comp.id, name: comp.name, p1: v.p[1], p2: v.p[2], p3: v.p[3], by: S.me.name, byUid: S.me.uid, at: serverTimestamp() });
+        v.msg = "Saved: " + comp.name; clear();
+      } catch (e) { v.msg = friendly(e); }
+      render();
+    } }, v.editing ? "Save changes" : "Save results"),
+    v.editing ? h("button", { class: "o", onclick: () => { clear(); render(); } }, "Cancel editing") : null,
+    h("h3", {}, `Results entered for ${C.pretty(v.date)} (${todays.length})`), todays.length ? null : h("div", { class: "muted" }, "None yet."),
+    todays.map((r) => h("div", { class: "card" }, h("div", { class: "row" }, h("div", { class: "grow" }, h("div", { class: "b" }, r.name),
+      [[1, r.p1], [2, r.p2], [3, r.p3]].filter((x) => x[1].length).map(([n, ids]) => h("div", { class: "muted" }, C.placeLabel(n) + ": " + names(ids)))),
+      isHM() || r.byUid === S.me.uid ? h("div", { class: "row" },
+        h("button", { class: "t", onclick: () => { v.editing = r.id; v.compId = r.competitionId; v.p = { 1: [...r.p1], 2: [...r.p2], 3: [...r.p3] }; v.msg = ""; render(); } }, "Edit"),
+        h("button", { class: "t", onclick: () => confirmBox("Remove these results?", r.name, "Remove", () => deleteDoc(doc(db, "competition_results", r.id)), true) }, "Remove")) : null))),
+  ));
+}
+function manageComps() {
+  modal((close) => {
+    const name = h("input", { type: "text", placeholder: "New competition name" });
+    const list = h("div", {});
+    const draw = () => {
+      const on = S.competitions.filter((c) => c.active), off = S.competitions.filter((c) => !c.active);
+      list.replaceChildren(on.map((c) => h("div", { class: "row" }, h("div", { class: "grow" }, c.name), h("button", { class: "t", onclick: async () => { await updateDoc(doc(db, "competitions", c.id), { active: false }); setTimeout(draw, 300); } }, "Remove"))),
+        off.length ? [h("div", { class: "b" }, "Removed (tap to bring back)"), off.map((c) => h("div", { class: "row" }, h("div", { class: "grow muted" }, c.name), h("button", { class: "t", onclick: async () => { await updateDoc(doc(db, "competitions", c.id), { active: true }); setTimeout(draw, 300); } }, "Restore")))] : null);
+    };
+    draw();
+    return [h("h3", {}, "Competitions"), name, h("button", { onclick: async () => {
+      if (!name.value.trim()) return;
+      await setDoc(doc(collection(db, "competitions")), { name: name.value.trim(), active: true, order: Math.max(0, ...S.competitions.map((c) => c.order)) + 1 }); name.value = ""; setTimeout(draw, 300);
+    } }, "Add"), h("div", { class: "muted" }, "Removing hides a competition from the list. Old results are kept."), list, h("div", { class: "row" }, h("div", { class: "grow" }), h("button", { onclick: close }, "Done"))];
+  });
+}

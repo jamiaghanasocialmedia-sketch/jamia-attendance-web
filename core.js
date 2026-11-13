@@ -1,7 +1,7 @@
 // Data model + logic, ported 1:1 from the Android app (Models.kt, Reports.kt, StudentRecord.kt, Leave.kt).
 export const ST = { P: "P", L: "L", A: "A", N: "N", D: "D", S: "S", V: "V" };
 export const SPORTS_ID = "sports";
-export const LEAVE_LAST_SATURDAY = "last_saturday", LEAVE_SICK = "sick", LEAVE_PERSONAL = "personal";
+export const LEAVE_LAST_SATURDAY = "last_saturday", LEAVE_SICK = "sick", LEAVE_PERSONAL = "personal", LEAVE_SUMMER = "summer", LEAVE_DUTY = "duty";
 export const PRAYER_PAIR = { zuhr: "asr", asr: "zuhr", maghrib: "isha", isha: "maghrib" };
 export const PART_SALAT = "salat", PART_OTHER = "other", PART_SPORTS = "sports", PART_CLEAN = "clean";
 export const PARTS = [PART_SALAT, PART_OTHER, PART_SPORTS, PART_CLEAN];
@@ -24,6 +24,7 @@ export const DEFAULT_ACTIVITIES = [
   ["majlis_ilmi", "Majlis-e-Ilmi", "Programs", "attendance", 9], ["ruhani_khazain", "Ruhani Khazain Lecture", "Programs", "attendance", 10],
   ["cleanliness", "General Cleanliness", "Inspection", "inspection", 11], ["sports", "Sports", "Sports", "attendance", 12],
   ["jamia_classes", "Jamia Classes", "Class", "attendance", 13, true], ["study_time", "Study Time", "Class", "attendance", 14, true],
+  ["waqar_e_amal", "Waqar-e-Amal Attendance", "Inspection", "attendance", 15],
 ].map(([id, name, group, type, order, multi]) => ({ id, name, group, type, order, active: true, multi: !!multi }));
 
 export const isInspection = (a) => a.type === "inspection";
@@ -43,7 +44,7 @@ const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export const pretty = (s) => { try { const d = parseD(s); return `${DOW[d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]} ${d.getFullYear()}`; } catch { return s; } };
 export const dm = (s) => { try { const d = parseD(s); return `${d.getDate()} ${MON[d.getMonth()]}`; } catch { return s; } };
 export const fmtPct = (d) => (d == null ? "-" : d.toFixed(1) + "%");
-export const leaveReasonLabel = (r) => (r === LEAVE_LAST_SATURDAY ? "Last Saturday Leave" : r === LEAVE_SICK ? "Sick leave" : "Personal leave");
+export const leaveReasonLabel = (r) => (r === LEAVE_LAST_SATURDAY ? "Last Saturday Leave" : r === LEAVE_SICK ? "Sick leave" : r === LEAVE_SUMMER ? "Summer Holidays" : r === LEAVE_DUTY ? "Duty off-campus leave" : "Personal leave");
 export const leaveDays = (l) => daysBetween(l.from, l.to) + 1;
 export const leaveDaysIn = (l, from, to) => {
   const a = l.from > from ? l.from : from, z = l.to < to ? l.to : to;
@@ -92,10 +93,16 @@ export function nextStatusHm(cur, inspection, absentBase = false, noLate = false
 }
 
 // ---- the shared live data and the rules that depend on it ----
+export const DEFAULT_ACADEMIC_YEAR = { sm: 9, sd: 1, em: 6, ed: 30 };
 export const S = {
+  academicYear: DEFAULT_ACADEMIC_YEAR,
   me: null, classes: [], students: [], activities: [], users: [],
   dutyRules: DEFAULT_DUTY_RULES, dutyDays: {}, sportsEx: [], clinic: [], leaves: [], leaveRules: DEFAULT_LEAVE_RULES,
+  competitions: [], compResults: [],
 };
+export const DEFAULT_COMPETITIONS = ["Holy Qur’an Recitation Competition", "Kasauti (Guess and Pass) Competition", "Khutbat-e-Imam Competition", "Nazm Recitation Competition", "English Message Delivery Competition", "Urdu Extempore Speech Competition", "Qaseedah Recitation Competition", "English Extempore Speech Competition", "Urdu Message Delivery Competition", "Adhan Calling Competition", "Khutbah Ilhamiyyah Competition", "Arabic Extempore Speech Competition", "General Knowledge Quiz", "Prayer Memorisation Competition", "Religious Knowledge Quiz", "Khazain Dictionary Competition", "Arabic Prepared Speech Competition", "Urdu Prepared Speech Competition", "English Prepared Speech Competition", "Muqabila Ayat-e-Qur’ani (Qur’anic Verses Competition)", "Arabic Message Delivery Competition", "Bait Bazi Competition", "English Essay Writing Competition", "Urdu Essay Writing Competition", "Arabic Essay Writing Competition"];
+export const placeLabel = (p) => (p === 1 ? "1st" : p === 2 ? "2nd" : "3rd");
+export const placeOf = (r, id) => (r.p1.includes(id) ? 1 : r.p2.includes(id) ? 2 : r.p3.includes(id) ? 3 : null);
 
 export function leaveCovers(date, studentId, activityId) {
   for (const l of S.leaves) {
@@ -203,7 +210,32 @@ export function classRanks(rows) {
   return out;
 }
 
-export function buildStudentRecord(st, sessions, from, to, duty) {
+export const ayText = (a) => { const M = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return `${a.sd} ${M[a.sm - 1]} to ${a.ed} ${M[a.em - 1]}`; };
+const p2 = (n) => String(n).padStart(2, "0");
+/** Academic years (e.g. 1 Sep to 30 Jun) that overlap from..to, each clipped to the period. */
+export function academicWindows(from, to, ay = S.academicYear) {
+  const out = [], wraps = ay.em < ay.sm || (ay.em === ay.sm && ay.ed < ay.sd);
+  for (let y = +from.slice(0, 4) - 1; y <= +to.slice(0, 4); y++) {
+    const s = `${y}-${p2(ay.sm)}-${p2(ay.sd)}`, e = `${wraps ? y + 1 : y}-${p2(ay.em)}-${p2(ay.ed)}`;
+    const f = s > from ? s : from, t = e < to ? e : to;
+    if (f <= t) out.push({ label: wraps ? `${y}/${String((y + 1) % 100).padStart(2, "0")}` : String(y), from: f, to: t });
+  }
+  return out;
+}
+
+export function buildStudentRecord(st, sessions, from, to, duty, noYears) {
+  const rec = buildStudentRecordOne(st, sessions, from, to, duty);
+  if (!noYears && (new Date(to) - new Date(from)) / 86400000 > 366) {
+    rec.years = [];
+    for (const w of academicWindows(from, to)) {
+      const sub = buildStudentRecordOne(st, sessions.filter((x) => x.date >= w.from && x.date <= w.to), w.from, w.to, duty);
+      if (!sub.acts.length && !sub.sick.length && !sub.leaves.length && !sub.comps.length) continue;
+      sub.label = w.label; rec.years.push(sub);
+    }
+  }
+  return rec;
+}
+function buildStudentRecordOne(st, sessions, from, to, duty) {
   const actMap = Object.fromEntries(S.activities.map((a) => [a.id, a]));
   const allIds = S.activities.map((a) => a.id);
   const rows = buildReport(sessions, null, allIds);
@@ -236,5 +268,6 @@ export function buildStudentRecord(st, sessions, from, to, duty) {
     combined: row ? row.combined : null, parts: row ? row.parts : {}, partCounts, acts, entries, from, to,
     sick: S.clinic.filter((x) => x.studentId === st.id && x.date >= from && x.date <= to).sort((a, b) => a.date.localeCompare(b.date)),
     leaves: S.leaves.filter((x) => x.studentId === st.id && x.from <= to && x.to >= from).sort((a, b) => a.from.localeCompare(b.from)),
+    comps: S.compResults.filter((r) => r.date >= from && r.date <= to).map((r) => [r, placeOf(r, st.id)]).filter((x) => x[1]).sort((a, b) => a[0].date.localeCompare(b[0].date) || a[0].name.localeCompare(b[0].name)),
   };
 }
