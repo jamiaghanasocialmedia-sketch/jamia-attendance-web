@@ -223,7 +223,7 @@ function switchAccount() {
 // =====================================================================
 // shared little widgets
 // =====================================================================
-function studentRow(name, sub, code, inspection, tappable, onTap, dutyLabel = "Security duty") {
+function studentRow(name, sub, code, inspection, tappable, onTap, dutyLabel = "Duty") {
   return h("div", { class: "stu" + (tappable ? "" : " locked"), onclick: tappable ? onTap : null },
     h("div", { class: "grow" }, h("div", { class: "b" }, name), sub ? h("div", { class: "muted" }, sub) : null),
     pill(code, C.statusLabel(code, inspection, dutyLabel)));
@@ -404,8 +404,24 @@ function hmRoot() {
 function todayTab(v) {
   v.date ||= C.todayStr();
   watchDate(v.date);
-  const acts = S.activities.filter((a) => a.active);
+  v.group ||= "salat";
+  // Four groups: Salat, Jamia Activities, Sports, and Cleanliness together with Waqar-e-Amal.
+  const groupOf = (a) => (C.isInspection(a) || a.id === "waqar_e_amal" ? "clean" : a.group === "Prayers" ? "salat" : a.id === C.SPORTS_ID || a.group === "Sports" ? "sports" : "other");
+  const acts = S.activities.filter((a) => a.active && groupOf(a) === v.group);
+  const sName = (id) => (S.students.find((s) => s.id === id) || { name: "(removed student)" }).name, cName = (id) => clsName(id);
+  const showSick = () => {
+    const list = S.clinic.filter((x) => x.date === v.date).sort((a, b) => sName(a.studentId).localeCompare(sName(b.studentId)));
+    modal((close) => [h("h3", {}, `Sick on ${C.pretty(v.date)} (${list.length})`), list.length ? list.map((x) => h("div", { class: "card" }, h("div", { class: "b" }, sName(x.studentId)),
+      h("div", { class: "muted" }, `${cName(x.classId)}  -  ${x.place === "hospital" ? "Hospital" : "Hostel rest"}${(x.ailments || []).length ? "  -  " + x.ailments.join(", ") : ""}`))) : h("div", {}, "Nobody was recorded sick on this day."), h("button", { class: "o", onclick: close }, "Close")]);
+  };
+  const showLeave = () => {
+    const list = S.leaves.filter((x) => v.date >= x.from && v.date <= x.to).sort((a, b) => sName(a.studentId).localeCompare(sName(b.studentId)));
+    modal((close) => [h("h3", {}, `Off campus on ${C.pretty(v.date)} (${list.length})`), list.length ? list.map((x) => h("div", { class: "card" }, h("div", { class: "b" }, sName(x.studentId)),
+      h("div", { class: "muted" }, `${cName(x.classId)}  -  ${C.leaveReasonLabel(x.reason)}  -  ${C.pretty(x.from)} to ${C.pretty(x.to)}`))) : h("div", {}, "Nobody is on off-campus leave on this day."), h("button", { class: "o", onclick: close }, "Close")]);
+  };
   return h("div", { class: "pad" }, dateRow(v.date, (d) => { v.date = d; render(); }),
+    chips([["salat", "Salat"], ["other", "Jamia Activities"], ["sports", "Sports"], ["clean", "Cleanliness & Waqar-e-Amal"]], v.group, (g) => { v.group = g; render(); }),
+    h("div", { class: "row" }, h("button", { class: "o", onclick: showSick }, "Sick today"), h("button", { class: "o", onclick: showLeave }, "On leave today")),
     acts.map((a) => h("div", { class: "card" }, h("div", { class: "b" }, a.name),
       h("div", { class: "grid", style: { gridTemplateColumns: `repeat(${S.classes.length || 1},1fr)`, marginTop: "8px" } },
         S.classes.map((c, i) => {

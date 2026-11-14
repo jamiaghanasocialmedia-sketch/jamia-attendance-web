@@ -57,7 +57,7 @@ export function lastSaturdayFor(today) {
   return today <= thisM ? thisM : lastSat(t.getFullYear(), t.getMonth() + 1);
 }
 
-export function statusLabel(code, inspection, dutyLabel = "Security duty") {
+export function statusLabel(code, inspection, dutyLabel = "Duty") {
   if (code === ST.D) return dutyLabel;
   if (code === ST.S) return "Permission";
   if (code === ST.V) return "Leave";
@@ -107,6 +107,8 @@ export const placeOf = (r, id) => (r.p1.includes(id) ? 1 : r.p2.includes(id) ? 2
 export function leaveCovers(date, studentId, activityId) {
   for (const l of S.leaves) {
     if (l.studentId !== studentId || date < l.from || date > l.to) continue;
+    // Sick leave never excuses attendance; it is only recorded for the reports.
+    if (l.reason === LEAVE_SICK) continue;
     if (l.reason !== LEAVE_LAST_SATURDAY) return true;
     let set;
     if (l.from !== l.to && date === l.from) set = S.leaveRules.thu;
@@ -139,8 +141,9 @@ export function dutyExcused(date, studentId, activityId) {
 export function effective(s, studentId, inspection) {
   const m = s.marks[studentId] ?? null;
   if (isExcused(m) || inspection) return m;
-  if (shownCode(m, s.base === ST.A) !== ST.A) return m;
-  if (dutyExcused(s.date, studentId, s.activityId)) return ST.D;
+  // Security duty only turns an Absent mark into Duty; Present and Late stay as they are.
+  if (shownCode(m, s.base === ST.A) === ST.A && dutyExcused(s.date, studentId, s.activityId)) return ST.D;
+  // Leave and sports duty / permission override every mark (Present, Late or Absent).
   if (leaveCovers(s.date, studentId, s.activityId)) return ST.V;
   return sportsStatus(s.date, studentId, s.activityId) ?? m;
 }
