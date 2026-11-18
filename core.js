@@ -97,7 +97,7 @@ export function nextStatusHm(cur, inspection, absentBase = false, noLate = false
 // ---- the shared live data and the rules that depend on it ----
 export const DEFAULT_ACADEMIC_YEAR = { sm: 9, sd: 1, em: 6, ed: 30 };
 export const S = {
-  academicYear: DEFAULT_ACADEMIC_YEAR,
+  academicYear: DEFAULT_ACADEMIC_YEAR, signature: null,
   me: null, classes: [], students: [], activities: [], users: [],
   dutyRules: DEFAULT_DUTY_RULES, dutyDays: {}, sportsEx: [], clinic: [], leaves: [], leaveRules: DEFAULT_LEAVE_RULES,
   competitions: [], compResults: [],

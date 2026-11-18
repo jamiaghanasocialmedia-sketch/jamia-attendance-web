@@ -1,10 +1,16 @@
 // PDF reports (jsPDF). Page 1 of a student record mirrors the Android layout; everything fits on one page, signature included.
-import { placeLabel, PARTS, PART_CLEAN, partOf, partTitle, fmtPct, dm, pretty, leaveReasonLabel, leaveDaysIn, ST } from "./core.js";
+import { DEFAULT_SIG } from "./sigdata.js";
+import { placeLabel, PARTS, PART_CLEAN, partOf, partTitle, fmtPct, dm, pretty, leaveReasonLabel, leaveDaysIn, ST, S } from "./core.js";
 
 const GREEN = [30, 59, 47], CREAM = [245, 240, 230], SAND = [200, 180, 138], SAGE = [127, 140, 106], LIGHT = [230, 220, 197], GREY = [102, 102, 102];
 const W = 595.28, H = 841.89;
 
-function newJsPdf() { return new window.jspdf.jsPDF({ unit: "pt", format: "a4" }); }
+// Exact A4; asks PDF viewers to print at 100% (no "shrink to fit"), which is what leaves white borders.
+function newJsPdf() {
+  const d = new window.jspdf.jsPDF({ unit: "pt", format: "a4" });
+  try { d.viewerPreferences({ PrintScaling: "None", FitWindow: true }); } catch (e) { /* older viewer support: ignore */ }
+  return d;
+}
 function bg(doc) { doc.setFillColor(...CREAM); doc.rect(0, 0, W, H, "F"); }
 function rect(doc, x, y, w, h, c) { doc.setFillColor(...c); doc.rect(x, y, w, h, "F"); }
 function txt(doc, s, x, y, { size = 9, bold = false, italic = false, color = [0, 0, 0], align = "left" } = {}) {
@@ -136,12 +142,8 @@ export function drawFirstPage(doc, r) {
     const last = r.comps.slice(-3).map(([c, p]) => `${c.name.replace(/ Competition$/, "")} (${placeLabel(p)})`).join("      ");
     summary("MAJLIS-E-ILMI COMPETITIONS", `Position holder in ${r.comps.length} competition(s):      1st = ${n(1)}      2nd = ${n(2)}      3rd = ${n(3)}`, "", [wrap(doc, (r.comps.length > 3 ? "Latest: " : "") + last, fs, 520)[0]]);
   }
-  if (y < 768) y = 768;
-  rect(doc, 30, y + 22 - 8, 150, 0.8, [0, 0, 0]);
-  txt(doc, "Date", 30, y + 34 - 8, { size: 9, color: GREY });
-  rect(doc, 380, y + 22 - 8, 185, 0.8, [0, 0, 0]);
-  txt(doc, "Housemaster", 380, y + 34 - 8, { size: 9, color: GREY });
-  txt(doc, FOOTER, 297, y + 41, { size: 8, italic: true, color: GREY, align: "center" });
+  if (y < 780) y = 780;
+  SIG(doc, y);
 }
 
 function drawLaterPages(doc, r) {
@@ -207,11 +209,20 @@ function drawLaterPages(doc, r) {
 
 // ---------- Reports longer than one year: a different layout ----------
 export const isLong = (r) => !!(r.years && r.years.length >= 2);
-const SIG = (doc, y) => {
+// Housemaster signature (uploaded one, else the default) above the line; the date is the day the report is printed.
+function SIG(doc, y) {
+  const now = new Date(), printed = `${now.getDate()} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][now.getMonth()]} ${now.getFullYear()}`;
+  const img = S.signature || DEFAULT_SIG;
+  try {
+    const p = doc.getImageProperties(img), maxW = 150, maxH = 28;
+    const k = Math.min(maxW / p.width, maxH / p.height), w = p.width * k, h = p.height * k;
+    doc.addImage(img, "PNG", 380 + (185 - w) / 2, y + 13 - h, w, h);
+  } catch (e) { /* unreadable image: leave the line blank */ }
+  txt(doc, printed, 30, y + 10, { size: 10, align: "left" });
   rect(doc, 30, y + 14, 150, 0.8, [0, 0, 0]); txt(doc, "Date", 30, y + 26, { size: 9, color: GREY });
   rect(doc, 380, y + 14, 185, 0.8, [0, 0, 0]); txt(doc, "Housemaster", 380, y + 26, { size: 9, color: GREY });
   txt(doc, FOOTER, 297, y + 41, { size: 8, italic: true, color: GREY, align: "center" });
-};
+}
 function drawLongFirstPage(doc, r) {
   bg(doc);
   const L = LEVELS[0];
@@ -240,7 +251,7 @@ function drawLongFirstPage(doc, r) {
   txt(doc, `Times on leave: ${r.leaves.length}      Days away: ${r.leaves.reduce((a, l) => a + leaveDaysIn(l, r.from, r.to), 0)}`, 36, y + 9, { size: 9, bold: true }); y += 18;
   txt(doc, `Majlis-e-Ilmi positions: ${r.comps.length}      1st = ${c(1)}      2nd = ${c(2)}      3rd = ${c(3)}`, 36, y + 9, { size: 9, bold: true }); y += 18;
   txt(doc, "One full report page for each year follows, then the complete sick leave, off-campus leave and competition lists.", 36, y + 9, { size: 8.5, color: GREY });
-  SIG(doc, 768);
+  SIG(doc, 780);
 }
 function drawActivityPage(doc, r) {
   doc.addPage(); bg(doc);

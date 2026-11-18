@@ -7,6 +7,7 @@ import * as C from "./core.js";
 import { S, ST } from "./core.js";
 import { h, $, toast, modal, confirmBox, chips, check, dateRow, appBar, pill, navBar, modalOpen } from "./ui.js";
 import { studentPdf, classPdf, reportPdf } from "./pdf.js";
+import { DEFAULT_SIG } from "./sigdata.js";
 
 const app = initializeApp(firebaseConfig);
 let db;
@@ -120,6 +121,7 @@ function startData(u) {
   L(collection(db, "activities"), (s) => { S.activities = s.docs.map(mActivity).sort((a, b) => a.order - b.order); render(); });
   L(doc(db, "config", "dutyRules"), (s) => { const x = s.data(); S.dutyRules = s.exists() ? { day: arr(x.day), night: arr(x.night), nightNext: arr(x.nightNext) } : C.DEFAULT_DUTY_RULES; render(); });
   L(doc(db, "config", "academicYear"), (s) => { const x = s.data(); S.academicYear = s.exists() && x.sm ? { sm: x.sm, sd: x.sd, em: x.em, ed: x.ed } : C.DEFAULT_ACADEMIC_YEAR; render(); });
+  L(doc(db, "config", "signature"), (s) => { const x = s.data(); S.signature = s.exists() && x.data ? x.data : null; render(); });
   L(collection(db, "duty"), (s) => { S.dutyDays = {}; for (const d of s.docs) S.dutyDays[d.id] = { day: arr(d.data().day), night: arr(d.data().night) }; render(); });
   L(collection(db, "sports_exempt"), (s) => { S.sportsEx = s.docs.map((d) => ({ id: d.id, studentId: d.data().studentId || "", kind: d.data().kind || "duty", from: d.data().from || "", to: d.data().to || "", note: d.data().note || "" })); render(); });
   L(collection(db, "clinic"), (s) => { S.clinic = s.docs.map((d) => { const x = d.data(); return { id: d.id, studentId: x.studentId || "", classId: x.classId || "", date: x.date || "", ailments: arr(x.ailments), place: x.place || "hostel", by: x.by || "", byUid: x.byUid || "" }; }); render(); });
@@ -132,7 +134,7 @@ function startData(u) {
 }
 function stopData() {
   regs.forEach((r) => r()); regs = [];
-  Object.assign(S, { me: null, classes: [], students: [], activities: [], users: [], dutyRules: C.DEFAULT_DUTY_RULES, dutyDays: {}, sportsEx: [], clinic: [], leaves: [], leaveRules: C.DEFAULT_LEAVE_RULES, competitions: [], compResults: [], academicYear: C.DEFAULT_ACADEMIC_YEAR });
+  Object.assign(S, { me: null, classes: [], students: [], activities: [], users: [], dutyRules: C.DEFAULT_DUTY_RULES, dutyDays: {}, sportsEx: [], clinic: [], leaves: [], leaveRules: C.DEFAULT_LEAVE_RULES, competitions: [], compResults: [], academicYear: C.DEFAULT_ACADEMIC_YEAR, signature: null });
   liveStop();
 }
 // sessions for one date / one sheet
@@ -656,6 +658,7 @@ function moreTab(v) {
       async () => { v.syncing = true; v.syncMsg = ""; render(); try { v.syncMsg = await syncSeed(); } catch (e) { v.syncMsg = friendly(e); } v.syncing = false; render(); }) }, v.syncing ? "Updating..." : "Update class list"),
       v.syncMsg ? h("div", { class: "b" }, v.syncMsg) : null),
     box("Academic year", `Yearly reports follow these dates. Now: ${C.ayText(S.academicYear)}.`, h("button", { class: "o", onclick: academicYearDialog }, "Set academic year")),
+    box("Housemaster signature", S.signature ? "Your uploaded signature appears on every PDF report." : "The default signature appears on every PDF report.", h("button", { class: "o", onclick: signatureDialog }, "Upload / change signature")),
     box("Admin code", "Needed to correct or delete a submitted sheet.", h("button", { class: "o", onclick: changeCodeDialog }, "Change admin code")),
     box("Duty exemptions", "Which activities security duty excuses (Day duty, Night duty, and the morning after Night duty).", h("button", { class: "o", onclick: dutyRulesDialog }, "Edit duty exemptions")),
     h("div", { class: "row" }, h("div", { class: "b grow" }, "Activities"), h("button", { class: "o", onclick: () => activityDialog(null) }, "Add activity")),
@@ -695,6 +698,41 @@ function academicYearDialog() {
           if (![v.sd, v.ed].every((d) => d >= 1 && d <= 31)) { err.textContent = "Days must be 1 to 31."; return; }
           await setDoc(doc(db, "config", "academicYear"), v); toast("Saved."); close();
         } }, "Save"))];
+  });
+}
+// Turns a photo of a signature into a small transparent PNG (white paper becomes see-through).
+async function signaturePng(file) {
+  const bmp = await createImageBitmap(file), k = Math.min(1, 500 / bmp.width), w = Math.round(bmp.width * k), hh = Math.round(bmp.height * k);
+  const cv = document.createElement("canvas"); cv.width = w; cv.height = hh;
+  const cx = cv.getContext("2d", { willReadFrequently: true }); cx.drawImage(bmp, 0, 0, w, hh);
+  const im = cx.getImageData(0, 0, w, hh), d = im.data; let x0 = w, y0 = hh, x1 = 0, y1 = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    const g = (d[i] + d[i + 1] + d[i + 2]) / 3, a = Math.max(0, Math.min(1, (235 - g) / 150)) * 255;
+    d[i] = d[i + 1] = d[i + 2] = 0; d[i + 3] = a;
+    if (a > 40) { const p = i / 4, x = p % w, y = (p / w) | 0; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  if (x1 <= x0 || y1 <= y0) throw new Error("No signature found in that picture.");
+  cx.putImageData(im, 0, 0);
+  const cw = x1 - x0 + 1, ch = y1 - y0 + 1, P = 12;
+  const tint = (col) => { const t = document.createElement("canvas"); t.width = cw; t.height = ch; const c = t.getContext("2d"); c.drawImage(cv, x0, y0, cw, ch, 0, 0, cw, ch); c.globalCompositeOperation = "source-in"; c.fillStyle = col; c.fillRect(0, 0, cw, ch); return t; };
+  const o = document.createElement("canvas"); o.width = cw + 2 * P; o.height = ch + 2 * P; const c = o.getContext("2d");
+  c.shadowColor = "rgba(0,0,0,0.4)"; c.shadowBlur = 6; c.shadowOffsetX = 3; c.shadowOffsetY = 4; c.drawImage(tint("#000"), P, P);   // soft shadow
+  c.shadowColor = "transparent"; c.shadowBlur = 0; c.shadowOffsetX = 0; c.shadowOffsetY = 0;
+  c.globalAlpha = 0.85; c.drawImage(tint("#fff"), P - 1, P - 1); c.globalAlpha = 1;                                                   // raised edge highlight
+  c.drawImage(tint("#121426"), P, P);                                                                                                  // blue-black ink
+  return o.toDataURL("image/png");
+}
+function signatureDialog() {
+  modal((close) => {
+    const err = h("div", { class: "err" }), prev = h("img", { src: S.signature || DEFAULT_SIG, style: "max-width:100%;max-height:90px;background:#f5f0e6;padding:8px;border-radius:8px" });
+    const file = h("input", { type: "file", accept: "image/*", style: "display:none", onchange: async () => {
+      const f = file.files[0]; if (!f) return; err.textContent = "";
+      try { const data = await signaturePng(f); await setDoc(doc(db, "config", "signature"), { data }); toast("Signature saved."); close(); } catch (e) { err.textContent = e.message || "Could not use that picture."; }
+    } });
+    return [h("h3", {}, "Housemaster signature"), h("div", { class: "muted" }, "Sign on plain white paper, take a clear photo and upload it. The white background is removed automatically. It appears above the Housemaster line on every PDF, with the print date beside it."), prev, file, err,
+      h("div", { class: "row" }, h("button", { class: "o", onclick: close }, "Cancel"),
+        h("button", { class: "o", onclick: async () => { await deleteDoc(doc(db, "config", "signature")); toast("Default signature restored."); close(); } }, "Use default"),
+        h("div", { class: "grow" }), h("button", { onclick: () => file.click() }, "Choose picture"))];
   });
 }
 function changeCodeDialog() {
