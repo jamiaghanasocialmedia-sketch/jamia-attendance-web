@@ -20,11 +20,13 @@ export const DEFAULT_ACTIVITIES = [
   ["fajr", "Fajr", "Prayers", "attendance", 1], ["zuhr", "Zuhr", "Prayers", "attendance", 2],
   ["asr", "Asr", "Prayers", "attendance", 3], ["maghrib", "Maghrib", "Prayers", "attendance", 4],
   ["isha", "Isha", "Prayers", "attendance", 5], ["morning_assembly", "Morning Assembly", "Assemblies", "attendance", 6],
-  ["night_assembly", "Night Assembly", "Assemblies", "attendance", 7], ["saturday_program", "Saturday Program", "Programs", "attendance", 8],
-  ["majlis_ilmi", "Majlis-e-Ilmi", "Programs", "attendance", 9], ["ruhani_khazain", "Ruhani Khazain Lecture", "Programs", "attendance", 10],
-  ["cleanliness", "General Cleanliness", "Inspection", "inspection", 11], ["sports", "Sports", "Sports", "attendance", 12],
-  ["jamia_classes", "Jamia Classes", "Class", "attendance", 13, true], ["study_time", "Study Time", "Class", "attendance", 14, true],
-  ["waqar_e_amal", "Waqar-e-Amal Attendance", "Inspection", "attendance", 15],
+  ["night_assembly", "Night Assembly", "Assemblies", "attendance", 7],
+  ["friday_sermon", "Weekly Friday Sermon of Huzoor-e-Anwar", "Programs", "attendance", 8, true],
+  ["saturday_program", "Saturday Program", "Programs", "attendance", 9],
+  ["majlis_ilmi", "Majlis-e-Ilmi", "Programs", "attendance", 10], ["ruhani_khazain", "Ruhani Khazain Lecture", "Programs", "attendance", 11],
+  ["cleanliness", "General Cleanliness", "Inspection", "inspection", 12], ["sports", "Sports", "Sports", "attendance", 13],
+  ["jamia_classes", "Jamia Classes", "Class", "attendance", 14, true], ["study_time", "Study Time", "Class", "attendance", 15, true],
+  ["waqar_e_amal", "Waqar-e-Amal Attendance", "Inspection", "attendance", 16],
 ].map(([id, name, group, type, order, multi]) => ({ id, name, group, type, order, active: true, multi: !!multi }));
 
 export const isInspection = (a) => a.type === "inspection";
@@ -44,7 +46,7 @@ const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export const pretty = (s) => { try { const d = parseD(s); return `${DOW[d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]} ${d.getFullYear()}`; } catch { return s; } };
 export const dm = (s) => { try { const d = parseD(s); return `${d.getDate()} ${MON[d.getMonth()]}`; } catch { return s; } };
 export const fmtPct = (d) => (d == null ? "-" : d.toFixed(1) + "%");
-export const leaveReasonLabel = (r) => (r === LEAVE_LAST_SATURDAY ? "Last Saturday Leave" : r === LEAVE_SICK ? "Sick leave" : r === LEAVE_SUMMER ? "Summer Holidays" : r === LEAVE_DUTY ? "Duty off-campus leave" : "Personal leave");
+export const leaveReasonLabel = (r) => (r === LEAVE_LAST_SATURDAY ? "Last Saturday Leave" : r === LEAVE_SICK ? "Sick leave" : r === LEAVE_SUMMER ? "Summer Holidays" : r === LEAVE_DUTY ? "Duty leave" : "Personal leave");
 export const leaveDays = (l) => daysBetween(l.from, l.to) + 1;
 export const leaveDaysIn = (l, from, to) => {
   const a = l.from > from ? l.from : from, z = l.to < to ? l.to : to;

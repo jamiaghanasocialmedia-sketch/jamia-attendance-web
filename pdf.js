@@ -111,7 +111,7 @@ export function drawFirstPage(doc, r) {
     if (clean) hdr([[36, "Activity", false], [300, "Number of inspections", true], [392, "Passed", true], [474, "Needed Improvements", true], [546, "%", true]]);
     else hdr([[36, "Activity", false], [285, "Attendance taken", true], [347, "Present", true], [401, "Late", true], [455, "Absent", true], [508, k === PARTS[0] ? "Duty" : "Excused", true], [546, "%", true]]);
     for (const a of list) {
-      txt(doc, a.activity.name.slice(0, 28), 36, y + ty, { size: fs });
+      txt(doc, a.activity.name.slice(0, 44), 36, y + ty, { size: fs });
       const cells = clean ? [[300, a.counted], [392, a.present], [474, a.absent]] : [[285, a.counted + a.excused], [347, a.present], [401, a.late], [455, a.absent], [508, a.excused]];
       for (const [x, n] of cells) txt(doc, n, x, y + ty, { size: fs, align: "center" });
       txt(doc, fmtPct(a.pct), 546, y + ty, { size: fs, align: "center" });
@@ -257,7 +257,7 @@ function drawActivityPage(doc, r) {
     for (const [x, t, c] of cols) txt(doc, t, x, y + 11, { size: 8.5, bold: true, align: c ? "center" : "left" });
     y += 17;
     for (const a of list) {
-      txt(doc, a.activity.name.slice(0, 28), 36, y + 10, { size: 9 });
+      txt(doc, a.activity.name.slice(0, 44), 36, y + 10, { size: 9 });
       const cells = clean ? [[300, a.counted], [392, a.present], [474, a.absent]] : [[285, a.counted + a.excused], [347, a.present], [401, a.late], [455, a.absent], [508, a.excused]];
       for (const [x, v] of cells) txt(doc, v, x, y + 10, { size: 9, align: "center" });
       txt(doc, fmtPct(a.pct), 546, y + 10, { size: 9, align: "center" });

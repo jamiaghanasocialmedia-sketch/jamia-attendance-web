@@ -675,6 +675,7 @@ async function syncSeed() {
   for (const id of seed.removed || []) { const d = have[id]; if (d && d.active !== false) { archived++; ops.push((b) => b.update(doc(db, "students", id), { active: false })); } }
   const acts = Object.fromEntries((await getDocs(collection(db, "activities"))).docs.map((d) => [d.id, d.data()]));
   for (const a of C.DEFAULT_ACTIVITIES) {
+    if (acts[a.id] && acts[a.id].order !== a.order) ops.push((b) => b.update(doc(db, "activities", a.id), { order: a.order }));
     if (a.multi && acts[a.id] && acts[a.id].multi !== true) ops.push((b) => b.update(doc(db, "activities", a.id), { multi: true }));
     if (!acts[a.id]) { newActs++; ops.push((b) => b.set(doc(db, "activities", a.id), { name: a.name, group: a.group, type: a.type, order: a.order, active: true, multi: a.multi })); }
   }
@@ -802,7 +803,7 @@ function leaveScreen(back) {
   const current = S.leaves.filter((l) => l.to >= today).sort((a, b) => a.from.localeCompare(b.from) || ((B[a.studentId] || {}).name || "").toLowerCase().localeCompare(((B[b.studentId] || {}).name || "").toLowerCase()));
   const canDelete = (l) => isHM() || l.byUid === S.me.uid;
   return h("div", {}, appBar("Jamia off-campus leave", S.me.name, { back }), h("div", { class: "pad" },
-    h("div", { class: "b" }, "Reason"), chips([[C.LEAVE_LAST_SATURDAY, "Last Saturday Leave"], [C.LEAVE_PERSONAL, "Personal leave"], [C.LEAVE_SICK, "Sick leave"], [C.LEAVE_DUTY, "Duty off-campus leave"], [C.LEAVE_SUMMER, "Summer Holidays"]], v.reason, setReason),
+    h("div", { class: "b" }, "Reason"), chips([[C.LEAVE_LAST_SATURDAY, "Last Saturday Leave"], [C.LEAVE_PERSONAL, "Personal leave"], [C.LEAVE_SICK, "Sick leave"], [C.LEAVE_DUTY, "Duty leave"], [C.LEAVE_SUMMER, "Summer Holidays"]], v.reason, setReason),
     h("div", { class: "b" }, "From"), dateRow(v.from, (d) => { v.from = d; if (v.to < d) v.to = d; render(); }), h("div", { class: "b" }, "To"), dateRow(v.to, (d) => { v.to = d; render(); }),
     v.to < v.from ? h("div", { class: "err" }, "The last day must not be before the first day.") : null,
     h("div", { class: "b" }, `Students (${v.picked.size} picked)`), pickStudents(v, "picked"),
