@@ -28,6 +28,8 @@ function leaveText(r) {
   return ["last_saturday", "personal", "sick", "duty", "summer"].filter((k) => k in m).map((k) => `${leaveReasonLabel(k)} = ${m[k]}`).join("      ");
 }
 
+const FOOTER = "This report is intended for your self-assessment. Kindly review it and identify areas for improvement.";
+
 // Spacing levels for page 1, most comfortable first. The first level whose total height fits is used, so a student with a
 // 7-year record (many sick / leave / competition lines) still gets everything, the signature included, on one page.
 const LEVELS = [
@@ -107,7 +109,7 @@ export function drawFirstPage(doc, r) {
     const clean = k === PART_CLEAN;
     bar(titles[k], "Overall  " + fmtPct(r.parts[k]));
     if (clean) hdr([[36, "Activity", false], [300, "Number of inspections", true], [392, "Passed", true], [474, "Needed Improvements", true], [546, "%", true]]);
-    else hdr([[36, "Activity", false], [285, "Attendance taken", true], [347, "Present", true], [401, "Late", true], [455, "Absent", true], [508, "Excused", true], [546, "%", true]]);
+    else hdr([[36, "Activity", false], [285, "Attendance taken", true], [347, "Present", true], [401, "Late", true], [455, "Absent", true], [508, k === PARTS[0] ? "Duty" : "Excused", true], [546, "%", true]]);
     for (const a of list) {
       txt(doc, a.activity.name.slice(0, 28), 36, y + ty, { size: fs });
       const cells = clean ? [[300, a.counted], [392, a.present], [474, a.absent]] : [[285, a.counted], [347, a.present], [401, a.late], [455, a.absent], [508, a.excused]];
@@ -139,6 +141,7 @@ export function drawFirstPage(doc, r) {
   txt(doc, "Date", 30, y + 34 - 8, { size: 9, color: GREY });
   rect(doc, 380, y + 22 - 8, 185, 0.8, [0, 0, 0]);
   txt(doc, "Housemaster", 380, y + 34 - 8, { size: 9, color: GREY });
+  txt(doc, FOOTER, 297, y + 41, { size: 8, italic: true, color: GREY, align: "center" });
 }
 
 function drawLaterPages(doc, r) {
@@ -207,6 +210,7 @@ export const isLong = (r) => !!(r.years && r.years.length >= 2);
 const SIG = (doc, y) => {
   rect(doc, 30, y + 14, 150, 0.8, [0, 0, 0]); txt(doc, "Date", 30, y + 26, { size: 9, color: GREY });
   rect(doc, 380, y + 14, 185, 0.8, [0, 0, 0]); txt(doc, "Housemaster", 380, y + 26, { size: 9, color: GREY });
+  txt(doc, FOOTER, 297, y + 41, { size: 8, italic: true, color: GREY, align: "center" });
 };
 function drawLongFirstPage(doc, r) {
   bg(doc);
@@ -248,7 +252,7 @@ function drawActivityPage(doc, r) {
     rect(doc, 30, y, 535, 18, GREEN); txt(doc, titles[k], 36, y + 13, { size: 10.5, bold: true, color: CREAM });
     txt(doc, "Overall  " + fmtPct(r.parts[k]), 559, y + 13, { size: 10.5, bold: true, color: CREAM, align: "right" }); y += 26;
     const cols = clean ? [[36, "Activity", false], [300, "Number of inspections", true], [392, "Passed", true], [474, "Needed Improvements", true], [546, "%", true]]
-      : [[36, "Activity", false], [285, "Attendance taken", true], [347, "Present", true], [401, "Late", true], [455, "Absent", true], [508, "Excused", true], [546, "%", true]];
+      : [[36, "Activity", false], [285, "Attendance taken", true], [347, "Present", true], [401, "Late", true], [455, "Absent", true], [508, k === PARTS[0] ? "Duty" : "Excused", true], [546, "%", true]];
     rect(doc, 30, y, 535, 15, LIGHT);
     for (const [x, t, c] of cols) txt(doc, t, x, y + 11, { size: 8.5, bold: true, align: c ? "center" : "left" });
     y += 17;
