@@ -33,7 +33,7 @@ const mUser = (d) => { const x = d.data(); return { uid: d.id, name: x.name || "
 const mClass = (d) => ({ id: d.id, name: d.data().name || d.id, order: d.data().order || 0 });
 const mStudent = (d) => { const x = d.data(); return { id: d.id, name: x.name || "", country: x.country || "", aims: x.aims || "", classId: x.classId || "", active: x.active !== false }; };
 const mActivity = (d) => { const x = d.data(); return { id: d.id, name: x.name || d.id, group: x.group || "", type: x.type || "attendance", order: x.order || 0, active: x.active !== false, multi: !!x.multi }; };
-const mSession = (d) => { const x = d.data(); return { id: d.id, classId: x.classId || "", date: x.date || "", activityId: x.activityId || "", takerName: x.takerName || "", roster: arr(x.roster), marks: x.marks || {}, base: x.base || "P", deviceLocal: x.deviceLocal || "", n: x.n || 0, title: x.title || "", pending: d.metadata.hasPendingWrites }; };
+const mSession = (d) => { const x = d.data(); return { id: d.id, classId: x.classId || "", date: x.date || "", activityId: x.activityId || "", takerName: x.takerName || "", takerUid: x.takerUid || "", pair: x.pair || "", roster: arr(x.roster), marks: x.marks || {}, base: x.base || "P", deviceLocal: x.deviceLocal || "", n: x.n || 0, title: x.title || "", pending: d.metadata.hasPendingWrites }; };
 const isHM = () => S.me && S.me.role === "housemaster";
 const num = (s) => (s.n > 0 ? s.n : 1);
 const byId = () => Object.fromEntries(S.students.map((s) => [s.id, s]));
@@ -376,8 +376,8 @@ function rosterView(v) {
           const m2 = {};
           for (const k of ids) { if (C.dutyExcused(v.date, k, partner.id)) m2[k] = ST.D; else if (C.leaveCovers(v.date, k, partner.id)) m2[k] = ST.V; else if (marks[k]) m2[k] = marks[k]; }
           const b = writeBatch(db);
-          b.set(doc(db, "sessions", sid), sheetMap(me, cls.id, v.date, act.id, ids, m, absentBase, 0, ""));
-          b.set(doc(db, "sessions", psid), sheetMap(me, cls.id, v.date, partner.id, ids, m2, C.isAbsentBase(partner), 0, ""));
+          b.set(doc(db, "sessions", sid), { ...sheetMap(me, cls.id, v.date, act.id, ids, m, absentBase, 0, ""), pair: partner.id });
+          b.set(doc(db, "sessions", psid), { ...sheetMap(me, cls.id, v.date, partner.id, ids, m2, C.isAbsentBase(partner), 0, ""), pair: act.id });
           await b.commit();
         } else await setDoc(doc(db, "sessions", sid), sheetMap(me, cls.id, v.date, act.id, ids, m, absentBase, n, v.title));
         saveDraft(sid, {}); v.marks = null;
@@ -452,6 +452,26 @@ function todayTab(v) {
       return h("div", { class: "grid", style: { gridTemplateColumns: `repeat(${S.classes.length || 1},1fr) auto`, marginTop: "8px" } }, cells, totalCell); })())));
 }
 
+/** Maghrib+Isha (and Zuhr+Asr) can be taken as one list. A correction to one is mirrored to the other. */
+async function twinUpdate(cur, edits) {
+  const pid = cur.pair || C.PRAYER_PAIR[cur.activityId];
+  if (!pid) return null;
+  const orig = cur.marks || {}, keys = [...new Set([...Object.keys(orig), ...Object.keys(edits)])].filter((k) => (edits[k] ?? null) !== (orig[k] ?? null));
+  if (!keys.length) return null;
+  const psid = C.sessionId(cur.classId, cur.date, pid), snap = await getDoc(doc(db, "sessions", psid));
+  if (!snap.exists()) return null;
+  const pd = snap.data(), same = (a, b) => JSON.stringify(Object.entries(a || {}).sort()) === JSON.stringify(Object.entries(b || {}).sort());
+  const together = cur.pair === pid || pd.pair === cur.activityId ||
+    (pd.takerUid === cur.takerUid && same([...(pd.roster || [])].sort(), [...(cur.roster || [])].sort()) && same(pd.marks, orig));
+  if (!together) return null;
+  const pm = { ...(pd.marks || {}) }; let count = 0;
+  for (const k of keys) {
+    if ((pm[k] ?? null) === (orig[k] ?? null)) { if (edits[k] == null) delete pm[k]; else pm[k] = edits[k]; count++; }
+  }
+  const act = S.activities.find((a) => a.id === pid);
+  return count ? { id: psid, marks: pm, count, name: act ? act.name : pid } : null;
+}
+
 function sheetDetail(v) {
   watchSheet(v.id);
   const back = () => go("home", { tab: "today", date: v.back && v.back.date });
@@ -472,7 +492,14 @@ function sheetDetail(v) {
         h("button", { onclick: () => askAdminCode((code) => { v.code = code; v.edits = { ...cur.marks }; v.msg = ""; render(); }) }, "Correct this sheet (admin code)") :
         [h("button", { disabled: v.busy, onclick: async () => {
           v.busy = true; render();
-          try { await commitWithProof(v.code, (b) => b.update(doc(db, "sessions", v.id), { marks: v.edits, correctedAt: serverTimestamp(), correctedBy: S.me.name })); v.edits = null; v.code = ""; v.msg = "Saved."; }
+          try {
+            const twin = await twinUpdate(cur, v.edits);
+            await commitWithProof(v.code, (b) => {
+              b.update(doc(db, "sessions", v.id), { marks: v.edits, correctedAt: serverTimestamp(), correctedBy: S.me.name });
+              if (twin) b.update(doc(db, "sessions", twin.id), { marks: twin.marks, correctedAt: serverTimestamp(), correctedBy: S.me.name });
+            });
+            v.edits = null; v.code = ""; v.msg = "Saved." + (twin ? ` ${twin.name} was updated too for ${twin.count} student(s) (prayed together).` : "");
+          }
           catch (e) { v.msg = String(e.code).includes("permission-denied") ? "Rejected: wrong admin code." : friendly(e); }
           v.busy = false; render();
         } }, v.busy ? "Saving..." : "Save"),
