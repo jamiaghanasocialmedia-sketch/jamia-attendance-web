@@ -124,25 +124,31 @@ export function particularsPdf(student, d, meta = {}, opts = {}) {
   // Only answered fields are printed (a section with no answers is left out). Sections flow onto as many pages as they need,
   // and the spacing / type size shrinks if more than three pages would be needed.
   const SCALES = [1, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6];
-  const rowsOf = (sec, sc) => sec.fields.filter((f) => shown(f, d) && f.k !== "regNo").map((f) => { // the registration number is already in the page header
-    const v = show(f, d[f.k]), vl = lines(v, 10 * sc, W - X - VX), ll = lines(f.l, 8.5 * sc, LW);
-    return { v, vl, ll, h: Math.max(vl.length * 12.5 * sc, ll.length * 11 * sc) + 6 * sc };
+  // k = how much of the normal row padding is kept (1 = normal, smaller = tighter)
+  const rowsOf = (sec, sc, k) => sec.fields.filter((f) => shown(f, d) && f.k !== "regNo").map((f) => { // the registration number is already in the page header
+    const v = show(f, d[f.k]), vl = lines(v, 10 * sc, W - X - VX), ll = lines(f.l, 8.5 * sc, LW), pad = 6 * sc * k;
+    return { v, vl, ll, pad, h: Math.max(vl.length * 12.5 * sc, ll.length * 11 * sc) + pad };
   }).filter((r) => r.v);
-  const layout = (sc, maxY = H - 44) => {
-    const ops = []; let pg = 0, y = 108;
+  const layout = (sc, k, maxY = H - 44) => {
+    const ops = []; let pg = 0, y = 108; const hp = 6 * sc * k, hh = hp + 24 * sc;
     for (const sec of SECTIONS) {
       if (sec.confidential && !includeHealth) continue;
-      const rows = rowsOf(sec, sc); if (!rows.length) continue;
-      if (y + 30 * sc + rows[0].h > maxY) { pg++; y = 40; }
-      ops.push({ pg, sec, y: y + 6 * sc }); y += 30 * sc;
+      const rows = rowsOf(sec, sc, k); if (!rows.length) continue;
+      if (y + hh + rows[0].h > maxY) { pg++; y = 40; }
+      ops.push({ pg, sec, y: y + hp }); y += hh;
       for (const r of rows) { if (y + r.h > maxY) { pg++; y = 40; } ops.push({ pg, r, y }); y += r.h; }
     }
     return { ops, pages: pg + 1, endY: y };
   };
   // the signature block needs 60pt at the bottom of the last page: if the content runs into it, keep that room on every page
-  const plan = (c) => { const a = layout(c); return a.endY <= H - 104 ? a : layout(c, H - 104); };
-  let sc = SCALES.find((c) => plan(c).pages <= 3) || SCALES[SCALES.length - 1];
-  const { ops, pages } = plan(sc);
+  const plan = (c, k = 1) => { const a = layout(c, k); return a.endY <= H - 104 ? a : layout(c, k, H - 104); };
+  let sc = SCALES.find((c) => plan(c).pages <= 3) || SCALES[SCALES.length - 1], kk = 1;
+  // Only a little spills onto page 2 (30% of a page or less)? Squeeze everything onto one page instead, as long as the text stays readable.
+  const base = plan(1);
+  if (base.pages === 2 && base.endY - 40 <= 0.3 * (H - 104 - 40)) {
+    outer: for (const c of [1, 0.975, 0.95, 0.925, 0.9, 0.875, 0.85, 0.825, 0.8, 0.775, 0.75, 0.725, 0.7]) for (const k of [1, 0.5, 0.25]) if (plan(c, k).pages === 1) { sc = c; kk = k; break outer; }
+  }
+  const { ops, pages } = plan(sc, kk);
   for (let pg = 0; pg < pages; pg++) {
     if (pg) doc.addPage();
     page(pg === 0);
@@ -154,7 +160,7 @@ export function particularsPdf(student, d, meta = {}, opts = {}) {
         const r = o.r, y0 = o.y;
         r.ll.forEach((ln, k) => T(ln, X + 4, y0 + 9 * sc + k * 11 * sc, { size: 8.5 * sc, color: GREY }));
         r.vl.forEach((ln, k) => T(ln, VX, y0 + 10 * sc + k * 12.5 * sc, { size: 10 * sc, bold: true }));
-        doc.setDrawColor(...LIGHT); doc.setLineWidth(0.5); doc.line(X, y0 + r.h - 2, W - X, y0 + r.h - 2);
+        doc.setDrawColor(...LIGHT); doc.setLineWidth(0.5); doc.line(X, y0 + r.h - r.pad / 3, W - X, y0 + r.h - r.pad / 3);
       }
     }
     if (pg === pages - 1) { // signature block: Registry signature and date
