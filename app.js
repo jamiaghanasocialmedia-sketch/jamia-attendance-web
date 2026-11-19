@@ -9,6 +9,7 @@ import { h, $, toast, modal, confirmBox, chips, check, dateRow, appBar, pill, na
 import { studentPdf, classPdf, reportPdf } from "./pdf.js";
 import { DEFAULT_SIG } from "./sigdata.js";
 import { SECTIONS, shown, show, progress, particularsPdf } from "./particulars.js";
+import { buildHistories, matchStudents, entriesFor, examPdf, EXAM_NAME, fmtMark } from "./exams.js";
 
 const app = initializeApp(firebaseConfig);
 let db;
@@ -30,7 +31,7 @@ const friendly = (e) => {
 
 // ---------- Firestore -> model ----------
 const arr = (v) => (Array.isArray(v) ? v : []);
-const mUser = (d) => { const x = d.data(); return { uid: d.id, name: x.name || "", username: x.username || "", role: x.role || "taker", activities: arr(x.activities), classes: arr(x.classes), active: x.active !== false, canEnterDuty: !!x.canEnterDuty, canClinic: !!x.canClinic, canLeave: !!x.canLeave, canCompetitions: !!x.canCompetitions, canParticulars: !!x.canParticulars }; };
+const mUser = (d) => { const x = d.data(); return { uid: d.id, name: x.name || "", username: x.username || "", role: x.role || "taker", activities: arr(x.activities), classes: arr(x.classes), active: x.active !== false, canEnterDuty: !!x.canEnterDuty, canClinic: !!x.canClinic, canLeave: !!x.canLeave, canCompetitions: !!x.canCompetitions, canParticulars: !!x.canParticulars, canRegistry: !!x.canRegistry }; };
 const mClass = (d) => ({ id: d.id, name: d.data().name || d.id, order: d.data().order || 0 });
 const mStudent = (d) => { const x = d.data(); return { id: d.id, name: x.name || "", country: x.country || "", aims: x.aims || "", classId: x.classId || "", active: x.active !== false }; };
 const mActivity = (d) => { const x = d.data(); return { id: d.id, name: x.name || d.id, group: x.group || "", type: x.type || "attendance", order: x.order || 0, active: x.active !== false, multi: !!x.multi }; };
@@ -131,12 +132,13 @@ function startData(u) {
   L(collection(db, "competition_results"), (s) => { S.compResults = s.docs.map((d) => { const x = d.data(); return { id: d.id, date: x.date || "", competitionId: x.competitionId || "", name: x.name || "", p1: arr(x.p1), p2: arr(x.p2), p3: arr(x.p3), by: x.by || "", byUid: x.byUid || "" }; }); render(); });
   L(doc(db, "config", "leaveRules"), (s) => { const x = s.data(), d = C.DEFAULT_LEAVE_RULES; S.leaveRules = s.exists() ? { thu: Array.isArray(x.thu) ? x.thu : d.thu, fri: Array.isArray(x.fri) ? x.fri : d.fri, sat: Array.isArray(x.sat) ? x.sat : d.sat } : d; render(); });
   L(doc(db, "users", u.uid), (s) => { if (s.exists()) { S.me = mUser(s); render(); } });
-  if (u.role === "housemaster" || u.canParticulars) L(collection(db, "particulars"), (s) => { S.particulars = {}; for (const d of s.docs) { const x = d.data(); S.particulars[d.id] = { d: x.d || {}, updatedAt: x.updatedAt && x.updatedAt.toDate ? x.updatedAt.toDate() : null, by: x.byName || "" }; } render(); });
+  if (u.role === "housemaster" || u.canParticulars || u.canRegistry) L(collection(db, "particulars"), (s) => { S.particulars = {}; for (const d of s.docs) { const x = d.data(); S.particulars[d.id] = { d: x.d || {}, updatedAt: x.updatedAt && x.updatedAt.toDate ? x.updatedAt.toDate() : null, by: x.byName || "" }; } render(); });
+  if (u.role === "housemaster" || u.canRegistry) L(collection(db, "exam_history"), (s) => { S.examHist = {}; for (const d of s.docs) { const x = d.data(); S.examHist[d.id] = { entries: arr(x.entries), name: x.name || "", at: x.importedAt && x.importedAt.toDate ? x.importedAt.toDate() : null }; } render(); });
   if (u.role === "housemaster") L(collection(db, "users"), (s) => { S.users = s.docs.map(mUser); render(); });
 }
 function stopData() {
   regs.forEach((r) => r()); regs = [];
-  Object.assign(S, { me: null, classes: [], students: [], activities: [], users: [], dutyRules: C.DEFAULT_DUTY_RULES, dutyDays: {}, sportsEx: [], clinic: [], leaves: [], leaveRules: C.DEFAULT_LEAVE_RULES, competitions: [], compResults: [], particulars: {}, academicYear: C.DEFAULT_ACADEMIC_YEAR, signature: null });
+  Object.assign(S, { me: null, classes: [], students: [], activities: [], users: [], dutyRules: C.DEFAULT_DUTY_RULES, dutyDays: {}, sportsEx: [], clinic: [], leaves: [], leaveRules: C.DEFAULT_LEAVE_RULES, competitions: [], compResults: [], particulars: {}, examHist: {}, academicYear: C.DEFAULT_ACADEMIC_YEAR, signature: null });
   liveStop();
 }
 // sessions for one date / one sheet
@@ -180,7 +182,7 @@ function build() {
   if (phase === "loading") return h("div", { class: "pad" }, "Loading...");
   if (phase === "login") return loginView();
   if (!S.me) return h("div", { class: "pad" }, "Loading...");
-  return isHM() ? hmRoot() : takerRoot();
+  return isHM() ? hmRoot() : S.me.canRegistry ? registryRoot() : takerRoot();
 }
 const input = (key, props = {}) => h("input", { "data-k": key, type: "search", ...props });
 
@@ -560,23 +562,23 @@ function peopleTab(v) {
   const people = S.users.filter((u) => u.role !== "housemaster").sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
   return h("div", { class: "pad" }, h("button", { onclick: () => personDialog(null) }, "Add attendance taker"),
     people.map((p) => h("div", { class: "card tap", onclick: () => personDialog(p) },
-      h("div", { class: "b" }, p.name + (p.canEnterDuty ? "   (enters duty list)" : "") + (p.canClinic ? "   (Jamia Clinic)" : "") + (p.canLeave ? "   (Leave)" : "") + (p.canCompetitions ? "   (Competitions)" : "") + (p.canParticulars ? "   (Particulars)" : "") + (p.active ? "" : "   [inactive]")),
+      h("div", { class: "b" }, p.name + (p.canEnterDuty ? "   (enters duty list)" : "") + (p.canClinic ? "   (Jamia Clinic)" : "") + (p.canLeave ? "   (Leave)" : "") + (p.canCompetitions ? "   (Competitions)" : "") + (p.canParticulars ? "   (Particulars)" : "") + (p.canRegistry ? "   (Registry, view only)" : "") + (p.active ? "" : "   [inactive]")),
       h("div", { class: "muted" }, "Username: " + displayUsername(p.username)),
       h("div", { class: "muted" }, "Records: " + (p.activities.map((i) => A[i]).filter(Boolean).join(", ") || "nothing")),
       h("div", { class: "muted" }, "Classes: " + (p.classes.includes("*") ? "All classes" : p.classes.map((i) => K[i]).filter(Boolean).join(", ") || "none")))));
 }
-async function createTaker(name, username, password, activities, classes, canEnterDuty, canClinic, canLeave, canCompetitions, canParticulars) {
+async function createTaker(name, username, password, activities, classes, canEnterDuty, canClinic, canLeave, canCompetitions, canParticulars, canRegistry) {
   let app2; try { app2 = (await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js")).getApp("secondary"); } catch { app2 = initializeApp(firebaseConfig, "secondary"); }
   const a2 = getAuth(app2), email = emailFor(username);
   const uid = (await createUserWithEmailAndPassword(a2, email, password)).user.uid;
   await signOut(a2);
-  await setDoc(doc(db, "users", uid), { name: name.trim(), username: email, role: "taker", active: true, activities, classes, canEnterDuty, canClinic, canLeave, canCompetitions, canParticulars: !!canParticulars });
+  await setDoc(doc(db, "users", uid), { name: name.trim(), username: email, role: "taker", active: true, activities, classes, canEnterDuty, canClinic, canLeave, canCompetitions, canParticulars: !!canParticulars, canRegistry: !!canRegistry });
 }
 function personDialog(init) {
   modal((close) => {
     const f = { name: init ? init.name : "", username: init ? displayUsername(init.username) : "", password: "", acts: new Set(init ? init.activities : []),
       all: init ? init.classes.includes("*") : false, cls: new Set(init ? init.classes.filter((c) => c !== "*") : []), duty: init ? init.canEnterDuty : false,
-      clinic: init ? init.canClinic : false, leave: init ? init.canLeave : false, comp: init ? init.canCompetitions : false, part: init ? init.canParticulars : false, active: init ? init.active : true };
+      clinic: init ? init.canClinic : false, leave: init ? init.canLeave : false, comp: init ? init.canCompetitions : false, part: init ? init.canParticulars : false, reg: init ? init.canRegistry : false, active: init ? init.active : true };
     const body = h("div", { class: "pad", style: { padding: 0 } });
     const err = h("div", { class: "err" });
     const ids = (...g) => new Set(S.activities.filter((a) => a.active && g.includes(a.group)).map((a) => a.id));
@@ -594,9 +596,11 @@ function personDialog(init) {
            ["Jamia Clinic", () => { f.acts = new Set(); f.all = false; f.cls = new Set(); f.duty = false; f.clinic = true; f.leave = false; f.comp = false; }],
            ["Leave", () => { f.acts = new Set(); f.all = false; f.cls = new Set(); f.duty = false; f.clinic = false; f.leave = true; f.comp = false; }],
            ["Competitions", () => { f.acts = new Set(); f.all = false; f.cls = new Set(); f.duty = false; f.clinic = false; f.leave = false; f.comp = true; f.part = false; }],
-           ["Particulars", () => { f.acts = new Set(); f.all = false; f.cls = new Set(); f.duty = false; f.clinic = false; f.leave = false; f.comp = false; f.part = true; }]]
+           ["Particulars", () => { f.acts = new Set(); f.all = false; f.cls = new Set(); f.duty = false; f.clinic = false; f.leave = false; f.comp = false; f.part = true; f.reg = false; }],
+           ["Registry (view only)", () => { f.acts = new Set(); f.all = false; f.cls = new Set(); f.duty = false; f.clinic = false; f.leave = false; f.comp = false; f.part = false; f.reg = true; }]]
             .map(([l, fn]) => h("button", { class: "o", onclick: () => { fn(); draw(); } }, l))),
         check("Can enter the security duty list", f.duty, (on) => (f.duty = on)), check("Jamia Clinic (records Sick Leave)", f.clinic, (on) => (f.clinic = on)), check("Leave (records Jamia off-campus leave)", f.leave, (on) => (f.leave = on)), check("Competitions (enters Majlis-e-Ilmi results)", f.comp, (on) => (f.comp = on)), check("Particulars (enters and views student personal records, including health details)", f.part, (on) => (f.part = on)),
+        check("Registry: views particulars, attendance reports and exam results, downloads PDFs and updates the exams database. Cannot change anything else.", f.reg, (on) => (f.reg = on)),
         h("div", { class: "b" }, "Can record"),
         [...new Set(S.activities.filter((a) => a.active).map((a) => a.group))].map((g) => [h("div", { class: "muted" }, g), S.activities.filter((a) => a.active && a.group === g).map((a) => check(a.name, f.acts.has(a.id), (on) => (on ? f.acts.add(a.id) : f.acts.delete(a.id))))]),
         h("div", { class: "b" }, "For these classes"), check("All classes", f.all, (on) => { f.all = on; draw(); }),
@@ -606,13 +610,13 @@ function personDialog(init) {
     draw();
     const save = h("button", { onclick: async () => {
       const canRec = f.acts.size && (f.all || f.cls.size);
-      if (!f.name.trim() || !(canRec || f.duty || f.clinic || f.leave || f.comp || f.part)) { err.textContent = "Add a name and at least one thing this person can do."; return; }
+      if (!f.name.trim() || !(canRec || f.duty || f.clinic || f.leave || f.comp || f.part || f.reg)) { err.textContent = "Add a name and at least one thing this person can do."; return; }
       if (!init && (f.username.trim().length < 3 || f.password.length < 6)) { err.textContent = "Username 3+ characters and password 6+ characters."; return; }
       save.disabled = true; err.textContent = "";
       const classes = f.all ? ["*"] : [...f.cls];
       try {
-        if (!init) await createTaker(f.name, f.username, f.password, [...f.acts], classes, f.duty, f.clinic, f.leave, f.comp, f.part);
-        else await updateDoc(doc(db, "users", init.uid), { name: f.name.trim(), activities: [...f.acts], classes, canEnterDuty: f.duty, canClinic: f.clinic, canLeave: f.leave, canCompetitions: f.comp, canParticulars: f.part, active: f.active });
+        if (!init) await createTaker(f.name, f.username, f.password, [...f.acts], classes, f.duty, f.clinic, f.leave, f.comp, f.part, f.reg);
+        else await updateDoc(doc(db, "users", init.uid), { name: f.name.trim(), activities: [...f.acts], classes, canEnterDuty: f.duty, canClinic: f.clinic, canLeave: f.leave, canCompetitions: f.comp, canParticulars: f.part, canRegistry: f.reg, active: f.active });
         close();
       } catch (e) { err.textContent = friendly(e); save.disabled = false; }
     } }, "Save");
@@ -620,10 +624,115 @@ function personDialog(init) {
   });
 }
 
+
+// ---------- Exam results (from the Jamia Exams Database backup) ----------
+function examCard(st, v) {
+  const rec = S.examHist[st.id];
+  if (!rec || !rec.entries.length) return h("div", { class: "card" }, h("div", { class: "b" }, "Exam results"), h("div", { class: "muted" }, "No exam results imported for this student."));
+  v.sem ??= false;
+  const list = rec.entries.filter((e) => v.sem || e.e === "annual"), years = new Set(rec.entries.map((e) => e.y)).size;
+  const remLabel = (r) => (r === "Comp." ? "Compartment" : r);
+  return h("div", { class: "card" }, h("div", { class: "b" }, "Exam results"),
+    h("div", { class: "muted" }, `${years} year${years === 1 ? "" : "s"} on record${rec.at ? ", imported " + rec.at.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : ""}. Tap a result to see the subject marks.`),
+    check("Also show first and second semester results", v.sem, (on) => { v.sem = on; render(); }),
+    list.slice().reverse().map((e) => h("details", { class: "pv" },
+      h("summary", {}, h("b", {}, `${e.y}   ${e.cn}${e.rep ? " (Repeat)" : ""}   ${EXAM_NAME[e.e]}`),
+        h("div", { class: "muted" }, `${fmtMark(e.total)} / ${e.max}   |   ${e.pct.toFixed(2)}%   |   Position ${e.pos} of ${e.of}${e.rem ? "   |   " + remLabel(e.rem) : ""}`)),
+      e.subs.map((s) => h("div", { class: "row" }, h("div", { class: "grow" }, s.n), h("div", { class: s.f ? "err b" : "b" }, fmtMark(s.m) + (s.f ? " *" : "")),
+        e.e === "annual" ? h("div", { class: "muted" }, `(${fmtMark(s.a)} / ${fmtMark(s.b)})`) : null)),
+      e.comp.length ? h("div", { class: "muted" }, "Compartment papers: " + e.comp.map((c) => `${c.n} ${fmtMark(c.m)} (${c.ok ? "passed" : "failed"})`).join(", ")) : null)),
+    h("button", { class: "o", onclick: () => savePdf(examPdf(st.name, clsName(st.classId), rec.entries, { semesters: v.sem }), `exams_${st.name.replace(/[^A-Za-z0-9]+/g, "_")}.pdf`) }, "Export exam results PDF"));
+}
+function examImportDialog() {
+  modal((close) => {
+    const err = h("div", { class: "err" }), file = h("input", { type: "file", accept: ".json,application/json", style: "display:none", onchange: async () => {
+      const f = file.files[0]; if (!f) return; err.textContent = "";
+      try { const data = buildHistories(JSON.parse(await f.text())); close(); examPreviewDialog(data); }
+      catch (e) { err.textContent = e instanceof SyntaxError ? "That file could not be read. Choose the backup file downloaded from the Jamia Exams Database." : (e.message || "Could not read that file."); }
+    } });
+    return [h("h3", {}, "Import exam results"), h("div", { class: "muted" }, "Choose the backup file from the Jamia Exams Database (jamia-exams-backup-....json). You will see a preview before anything is saved. Nothing in the exams app is changed."), file, err,
+      h("div", { class: "row" }, h("button", { class: "o", onclick: close }, "Cancel"), h("div", { class: "grow" }), h("button", { onclick: () => file.click() }, "Choose backup file"))];
+  });
+}
+function examPreviewDialog(data) {
+  const active = S.students.filter((s) => s.active), m = matchStudents(S.students.map((s) => ({ id: s.id, name: s.name })), data.names);
+  const activeIds = new Set(active.map((s) => s.id));
+  const unmatched = m.unmatched.filter((u) => activeIds.has(u.sid)), sug = m.suggested.filter((u) => activeIds.has(u.sid));
+  modal((close) => {
+    const pick = new Set(sug.filter((x) => x.score >= 0.8).map((x) => x.sid)), err = h("div", { class: "err" });
+    const matchedN = m.matched.length, body = h("div", { class: "pad", style: { padding: 0 } });
+    const go2 = h("button", { onclick: async () => {
+      go2.disabled = true; err.textContent = "";
+      const items = [...m.matched, ...sug.filter((x) => pick.has(x.sid))];
+      try {
+        for (let i = 0; i < items.length; i += 200) {
+          const b = writeBatch(db);
+          for (const it of items.slice(i, i + 200)) {
+            const entries = entriesFor(data.hist, it.ids);
+            if (entries.length) b.set(doc(db, "exam_history", it.sid), { studentId: it.sid, name: it.ids.map((x) => data.names[x]).join(" / "), entries, importedAt: serverTimestamp(), importedBy: S.me.name });
+          }
+          await b.commit();
+        }
+        close(); toast(`Exam results saved for ${items.length} students.`);
+      } catch (e) { err.textContent = friendly(e); go2.disabled = false; }
+    } }, "Import");
+    body.append(h("div", { class: "b" }, `${matchedN} students matched by name`),
+      h("div", { class: "muted" }, `${active.length} current students in the attendance system. ${Object.keys(data.names).length} students have exam results in the backup (all years).`),
+      sug.length ? [h("div", { class: "b" }, `${sug.length} similar names: tick the ones that are the same person`),
+        sug.map((x) => check(`${x.name}  =  ${x.examName} in the exams app`, pick.has(x.sid), (on) => (on ? pick.add(x.sid) : pick.delete(x.sid))))] : null,
+      unmatched.length ? [h("div", { class: "b" }, `${unmatched.length} current students not found in the exams app (no exam results)`),
+        h("div", { class: "muted", style: { maxHeight: "140px", overflowY: "auto" } }, unmatched.map((u) => u.name).join("  |  "))] : null);
+    return [h("h3", {}, "Preview"), body, err, h("div", { class: "row" }, h("button", { class: "o", onclick: close }, "Cancel"), h("div", { class: "grow" }), go2)];
+  });
+}
+
+
+// ---------- Registry (view only account) ----------
+function registryRoot() {
+  const v = view;
+  if (PV.has(v.name)) return particularsRouter(v);
+  if (v.name === "record") return recordScreen(v);
+  if (v.name === "rReports") return h("div", {}, appBar("Student attendance report", S.me.name, { back: () => go("home") }), reportsTab(v));
+  if (v.name === "eHome") return examHomeScreen(v);
+  if (v.name === "eStudent") return examStudentScreen(v);
+  const box = (t, d, fn) => h("div", { class: "card tap", onclick: fn }, h("div", { class: "b" }, t), h("div", { class: "muted" }, d));
+  return h("div", {}, appBar("Registry", S.me.name, { actions: [["Switch", switchAccount], ["Sign out", logout]] }),
+    h("div", { class: "pad" },
+      box("Student particulars", "View a student's personal record and download it as PDF.", () => go("pFind", { mode: "view" })),
+      box("Student attendance report", "Search a student or a class, view the attendance report and download PDFs.", () => go("rReports")),
+      box("Student examination database", "View a student's exam results, download PDFs and update the exams database.", () => go("eHome"))));
+}
+function examHomeScreen(v) {
+  v.q ??= ""; v.cid ??= null;
+  const q = v.q.trim().toLowerCase(), have = Object.keys(S.examHist).length;
+  const list = S.students.filter((s) => (!v.cid || s.classId === v.cid) && (!q || s.name.toLowerCase().includes(q)))
+    .sort((a, b) => (b.active - a.active) || a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+  const rows = q || v.cid ? list.slice(0, 40) : [];
+  return h("div", {}, appBar("Examination database", "Find a student", { back: () => go("home") }),
+    h("div", { class: "pad" },
+      h("div", { class: "card" }, h("div", { class: "b" }, "Update the exams database"),
+        h("div", { class: "muted" }, `${have ? have + " students have exam results." : "No exam results yet."} After new exams are entered in the Jamia Exams Database, download its backup file and import it here.`),
+        h("div", { style: { marginTop: "8px" } }, h("button", { onclick: examImportDialog }, "Import exams backup"))),
+      input("eq", { placeholder: "Search a student by name", value: v.q, oninput: (e) => { v.q = e.target.value; render(); } }),
+      chips([[null, "All classes"], ...S.classes.map((c) => [c.id, c.name])], v.cid, (id) => { v.cid = id; render(); }),
+      !q && !v.cid ? h("div", { class: "muted" }, "Type a name, or pick a class to see its students.") : null,
+      rows.map((s) => h("div", { class: "card tap", onclick: () => go("eStudent", { sid: s.id, from: v }) }, h("div", { class: "row" },
+        h("div", { class: "grow" }, h("div", { class: "b" }, s.name), h("div", { class: "muted" }, clsName(s.classId) + (s.active ? "" : "   [archived]"))),
+        S.examHist[s.id] ? pill("D", "Has results") : pill("L", "No results")))),
+      (q || v.cid) && !list.length ? h("div", { class: "muted" }, "No student found.") : null,
+      rows.length && list.length > rows.length ? h("div", { class: "muted" }, `Showing the first ${rows.length} of ${list.length}. Type more of the name to narrow it down.`) : null));
+}
+function examStudentScreen(v) {
+  const st = stuById(v.sid), from = v.from;
+  if (!st) return h("div", { class: "pad" }, h("div", { class: "err" }, "Student not found."), h("button", { onclick: () => go("eHome") }, "Back"));
+  return h("div", {}, appBar(st.name, clsName(st.classId), { back: () => go(from.name, from) }), h("div", { class: "pad" }, examCard(st, v)));
+}
+
 // ---------- Student particulars (personal records) ----------
 const PV = new Set(["pHome", "pFind", "pForm", "pView"]);
 const partOnly = () => { const m = S.me; return !!m && m.role !== "housemaster" && m.canParticulars && !m.activities.length && !m.canEnterDuty && !m.canClinic && !m.canLeave && !m.canCompetitions; };
 const partBack = () => (isHM() ? go("home", { tab: "today" }) : go("home"));
+const isReg = () => !!S.me && S.me.role !== "housemaster" && !!S.me.canRegistry;
 const stuById = (id) => S.students.find((s) => s.id === id);
 function particularsRouter(v) {
   if (v.name === "pFind") return partFind(v);
@@ -652,7 +761,7 @@ function partFind(v) {
     else if (S.particulars[s.id]) go("pView", { sid: s.id, from: v });
     else toast("No record has been entered for this student yet.");
   };
-  return h("div", {}, appBar(enter ? "Enter Record" : "View Record", "Find the student", { back: () => go("pHome") }),
+  return h("div", {}, appBar(enter ? "Enter Record" : "View Record", "Find the student", { back: () => (isReg() ? go("home") : go("pHome")) }),
     h("div", { class: "pad" },
       input("pq", { placeholder: "Search a student by name", value: v.q, oninput: (e) => { v.q = e.target.value; render(); } }),
       chips([[null, "All classes"], ...S.classes.map((c) => [c.id, c.name])], v.cid, (id) => { v.cid = id; render(); }),
@@ -716,7 +825,7 @@ function partView(v) {
       h("div", { class: "muted" }, `${cn}${when ? "   |   Last updated " + when : ""}${rec.by ? " by " + rec.by : ""}`),
       h("button", { onclick: () => savePdf(particularsPdf(st, d, { className: cn, updatedAt: rec.updatedAt, by: rec.by }, { includeHealth: v.health }), `particulars_${st.name.replace(/[^A-Za-z0-9]+/g, "_")}.pdf`) }, "Export PDF"),
       check("Include the confidential health section in the PDF", v.health, (on) => { v.health = on; render(); }),
-      h("button", { class: "o", onclick: () => go("pForm", { sid: st.id, from, after: "view" }) }, "Edit record"),
+      isReg() ? null : h("button", { class: "o", onclick: () => go("pForm", { sid: st.id, from, after: "view" }) }, "Edit record"),
       SECTIONS.map((s) => h("div", { class: "card" },
         h("div", { class: "b", style: s.confidential ? { color: "var(--red)" } : null }, s.title + (s.confidential ? "  (Confidential)" : "")),
         s.fields.filter((fd) => shown(fd, d)).map((fd) => { const t = show(fd, d[fd.k]); return h("div", { class: "pv" }, h("div", { class: "muted" }, fd.l), t ? h("div", { class: "v" }, t) : h("div", { class: "muted" }, "-")); })))));
@@ -783,7 +892,7 @@ function reportsTab(v) {
 function recordScreen(v) {
   const st = v.st;
   v.from ||= C.todayStr().slice(0, 8) + "01"; v.to ||= C.todayStr();
-  const back = () => go("home", { tab: "students" });
+  const back = isReg() ? () => go("rReports") : () => go("home", { tab: "students" });
   const r = v.rec;
   return h("div", {}, appBar(st.name, clsName(st.classId), { back }), h("div", { class: "pad" },
     h("div", { class: "b" }, "From"), dateRow(v.from, (d) => { v.from = d; render(); }), h("div", { class: "b" }, "To"), dateRow(v.to, (d) => { v.to = d; render(); }),
@@ -799,7 +908,8 @@ function recordScreen(v) {
       h("div", { class: "muted" }, `${r.entries.length} sheets in this period.`),
       h("div", { class: "muted" }, `Sick: ${r.sick.length} time(s), ${r.sick.filter((x) => x.place === "hospital").length} hospital visit(s).`),
       h("div", { class: "muted" }, `Leave: ${r.leaves.length} time(s), ${r.leaves.reduce((a, l) => a + C.leaveDaysIn(l, r.from, r.to), 0)} day(s) away.`)),
-      h("button", { onclick: () => savePdf(studentPdf(r), `record_${st.name.replace(/[^A-Za-z0-9]+/g, "_")}_${v.from}_to_${v.to}.pdf`) }, "Export PDF")] : null));
+      h("button", { onclick: () => savePdf(studentPdf(r), `record_${st.name.replace(/[^A-Za-z0-9]+/g, "_")}_${v.from}_to_${v.to}.pdf`) }, "Export PDF")] : null,
+    examCard(st, v)));
 }
 
 // ---------- More ----------
@@ -811,6 +921,8 @@ function moreTab(v) {
     box("Security duty list", "Who is on Day / Night duty.", h("button", { class: "o", onclick: () => go("duty") }, "Open")),
     box("Jamia off-campus leave", "", h("button", { class: "o", onclick: () => go("leave") }, "Open"), h("button", { class: "o", onclick: () => go("leaveRules") }, "Leave rules")),
     box("Appearance", "Light, Dark, or follow this device. Saved on this device only.", chips([["auto", "Automatic"], ["light", "Light"], ["dark", "Dark"]], themePref(), (t) => { setTheme(t); render(); })),
+    box("Exam results", `Bring each student's exam results from the Jamia Exams Database: open that app, Settings, Backup, download the backup file, then import it here. ${Object.keys(S.examHist).length ? Object.keys(S.examHist).length + " students have exam results." : "Nothing imported yet."} Importing again after new exams updates the results. Housemaster only.`,
+      h("button", { class: "o", onclick: examImportDialog }, "Import exams backup")),
     box("Class list (yearly update)", "Each year: download the template, update it in Excel (new students, promotions, leavers), then import it here. You see a preview before anything changes. Records of students who left are kept.",
       h("button", { class: "o", disabled: v.syncing, onclick: importDialog }, "Import Excel"),
       h("button", { class: "o", onclick: () => downloadTemplate(false) }, "Download template"),

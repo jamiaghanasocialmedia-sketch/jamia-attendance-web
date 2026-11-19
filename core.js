@@ -100,7 +100,7 @@ export const S = {
   academicYear: DEFAULT_ACADEMIC_YEAR, signature: null,
   me: null, classes: [], students: [], activities: [], users: [],
   dutyRules: DEFAULT_DUTY_RULES, dutyDays: {}, sportsEx: [], clinic: [], leaves: [], leaveRules: DEFAULT_LEAVE_RULES,
-  competitions: [], compResults: [], particulars: {},
+  competitions: [], compResults: [], particulars: {}, examHist: {},
 };
 export const DEFAULT_COMPETITIONS = ["Holy Qur’an Recitation Competition", "Kasauti (Guess and Pass) Competition", "Khutbat-e-Imam Competition", "Nazm Recitation Competition", "English Message Delivery Competition", "Urdu Extempore Speech Competition", "Qaseedah Recitation Competition", "English Extempore Speech Competition", "Urdu Message Delivery Competition", "Adhan Calling Competition", "Khutbah Ilhamiyyah Competition", "Arabic Extempore Speech Competition", "General Knowledge Quiz", "Prayer Memorisation Competition", "Religious Knowledge Quiz", "Khazain Dictionary Competition", "Arabic Prepared Speech Competition", "Urdu Prepared Speech Competition", "English Prepared Speech Competition", "Muqabila Ayat-e-Qur’ani (Qur’anic Verses Competition)", "Arabic Message Delivery Competition", "Bait Bazi Competition", "English Essay Writing Competition", "Urdu Essay Writing Competition", "Arabic Essay Writing Competition"];
 export const placeLabel = (p) => (p === 1 ? "1st" : p === 2 ? "2nd" : "3rd");
