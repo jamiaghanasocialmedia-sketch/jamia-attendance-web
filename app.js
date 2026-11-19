@@ -395,6 +395,8 @@ function hmRoot() {
   const menu = () => modal((close) => [h("h3", {}, "Menu"),
     ...[["students", "Students", "Add, edit, transfer or archive students"], ["people", "Attendance takers", "Who records which activities"], ["more", "Settings", "Duty, leave, competitions, activities, academic year, signature, appearance"]]
       .map(([t, label, d]) => h("div", { class: "card tap", onclick: () => { close(); go("home", { tab: t }); } }, h("div", { class: "b" }, label), h("div", { class: "muted" }, d))),
+    h("div", { class: "card tap", onclick: () => { close(); switchAccount(); } }, h("div", { class: "b" }, "Switch account"), h("div", { class: "muted" }, "Change to another saved account or add one")),
+    h("div", { class: "card tap", onclick: () => { close(); logout(); } }, h("div", { class: "b" }, "Sign out"), h("div", { class: "muted" }, "Log out of this account")),
     h("button", { class: "o", onclick: close }, "Close")]);
   if (v.name === "sheet") return sheetDetail(v);
   if (v.name === "record") return recordScreen(v);
