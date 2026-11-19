@@ -653,9 +653,13 @@ function moreTab(v) {
     box("Majlis-e-Ilmi competitions", "Enter results: 1st, 2nd, 3rd.", h("button", { class: "o", onclick: () => go("comps") }, "Open")),
     box("Security duty list", "Who is on Day / Night duty.", h("button", { class: "o", onclick: () => go("duty") }, "Open")),
     box("Jamia off-campus leave", "", h("button", { class: "o", onclick: () => go("leave") }, "Open"), h("button", { class: "o", onclick: () => go("leaveRules") }, "Leave rules")),
-    box("Class list", "Load the 2026-2027 class list and the Jamia Classes / Study Time activities.", h("button", { class: "o", disabled: v.syncing, onclick: () => confirmBox("Update class list?",
-      "This loads the 2026-2027 class list: it adds new students, corrects names and countries, archives students who left (their records are kept) and adds Jamia Classes and Study Time if they are missing. AIMS numbers you typed are not touched.", "Update",
-      async () => { v.syncing = true; v.syncMsg = ""; render(); try { v.syncMsg = await syncSeed(); } catch (e) { v.syncMsg = friendly(e); } v.syncing = false; render(); }) }, v.syncing ? "Updating..." : "Update class list"),
+    box("Appearance", "Light, Dark, or follow this device. Saved on this device only.", chips([["auto", "Automatic"], ["light", "Light"], ["dark", "Dark"]], themePref(), (t) => { setTheme(t); render(); })),
+    box("Class list (yearly update)", "Each year: download the template, update it in Excel (new students, promotions, leavers), then import it here. You see a preview before anything changes. Records of students who left are kept.",
+      h("button", { class: "o", disabled: v.syncing, onclick: importDialog }, "Import Excel"),
+      h("button", { class: "o", onclick: () => downloadTemplate(false) }, "Download template"),
+      h("button", { class: "o", onclick: () => downloadTemplate(true) }, "Download current list")),
+    box("Activities", "Adds any new activities (e.g. Friday Sermon) and puts them in the standard order.", h("button", { class: "o", disabled: v.syncing, onclick: () => confirmBox("Update activities?", "This adds missing activities and fixes their order. Students are not touched.", "Update",
+      async () => { v.syncing = true; v.syncMsg = ""; render(); try { v.syncMsg = await syncActivities(); } catch (e) { v.syncMsg = friendly(e); } v.syncing = false; render(); }) }, v.syncing ? "Updating..." : "Update activities"),
       v.syncMsg ? h("div", { class: "b" }, v.syncMsg) : null),
     box("Academic year", `Yearly reports follow these dates. Now: ${C.ayText(S.academicYear)}.`, h("button", { class: "o", onclick: academicYearDialog }, "Set academic year")),
     box("Housemaster signature", S.signature ? "Your uploaded signature appears on every PDF report." : "The default signature appears on every PDF report.", h("button", { class: "o", onclick: signatureDialog }, "Upload / change signature")),
@@ -666,16 +670,8 @@ function moreTab(v) {
     h("button", { class: "o", onclick: switchAccount }, "Switch account"), h("button", { onclick: logout }, "Sign out"),
     );
 }
-async function syncSeed() {
-  const seed = await (await fetch("seed.json", { cache: "no-store" })).json();
-  const have = Object.fromEntries((await getDocs(collection(db, "students"))).docs.map((d) => [d.id, d.data()]));
-  const ops = []; let added = 0, changed = 0, archived = 0, newActs = 0;
-  for (const st of seed.students) {
-    const d = have[st.id];
-    if (!d) { added++; ops.push((b) => b.set(doc(db, "students", st.id), { name: st.name, country: st.country, aims: st.aims, classId: st.classId, active: true })); }
-    else if (d.name !== st.name || d.country !== st.country || d.classId !== st.classId) { changed++; ops.push((b) => b.update(doc(db, "students", st.id), { name: st.name, country: st.country, classId: st.classId })); }
-  }
-  for (const id of seed.removed || []) { const d = have[id]; if (d && d.active !== false) { archived++; ops.push((b) => b.update(doc(db, "students", id), { active: false })); } }
+async function syncActivities() {
+  const ops = []; let newActs = 0;
   const acts = Object.fromEntries((await getDocs(collection(db, "activities"))).docs.map((d) => [d.id, d.data()]));
   for (const a of C.DEFAULT_ACTIVITIES) {
     if (acts[a.id] && acts[a.id].order !== a.order) ops.push((b) => b.update(doc(db, "activities", a.id), { order: a.order }));
@@ -683,7 +679,7 @@ async function syncSeed() {
     if (!acts[a.id]) { newActs++; ops.push((b) => b.set(doc(db, "activities", a.id), { name: a.name, group: a.group, type: a.type, order: a.order, active: true, multi: a.multi })); }
   }
   for (let i = 0; i < ops.length; i += 400) { const b = writeBatch(db); ops.slice(i, i + 400).forEach((f) => f(b)); await b.commit(); }
-  return `Done: ${added} students added, ${changed} corrected, ${archived} archived, ${newActs} activities added.`;
+  return `Done: ${newActs} activities added.`;
 }
 function academicYearDialog() {
   modal((close) => {
@@ -1003,5 +999,130 @@ function manageComps() {
       if (!name.value.trim()) return;
       await setDoc(doc(collection(db, "competitions")), { name: name.value.trim(), active: true, order: Math.max(0, ...S.competitions.map((c) => c.order)) + 1 }); name.value = ""; setTimeout(draw, 300);
     } }, "Add"), h("div", { class: "muted" }, "Removing hides a competition from the list. Old results are kept."), list, h("div", { class: "row" }, h("div", { class: "grow" }), h("button", { onclick: close }, "Done"))];
+  });
+}
+
+
+// ---------- Appearance ----------
+function themePref() { try { return localStorage.getItem("theme") || "auto"; } catch (e) { return "auto"; } }
+function setTheme(t) {
+  try { if (t === "auto") localStorage.removeItem("theme"); else localStorage.setItem("theme", t); } catch (e) { /* ignore */ }
+  if (t === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", t);
+}
+
+// ---------- Yearly class list from Excel ----------
+const norm = (x) => String(x == null ? "" : x).replace(/\s+/g, " ").trim();
+const key = (x) => norm(x).toLowerCase();
+const slug = (x) => key(x).replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "class";
+
+function downloadTemplate(current) {
+  if (typeof XLSX === "undefined") { toast("Excel library not loaded. Check the internet and try again."); return; }
+  if (!current) { const a = document.createElement("a"); a.href = "Class_List_Template.xlsx"; a.download = "Class_List_Template.xlsx"; document.body.append(a); a.click(); a.remove(); return; }
+  const cls = [...S.classes].sort((a, b) => a.order - b.order), byId = Object.fromEntries(cls.map((c) => [c.id, c]));
+  const rows = S.students.filter((s) => s.active !== false).sort((a, b) => ((byId[a.classId] || {}).order || 99) - ((byId[b.classId] || {}).order || 99) || a.name.localeCompare(b.name))
+    .map((s) => [s.id, (byId[s.classId] || {}).name || "", s.name, s.country || "", s.aims || ""]);
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([["Student ID (leave blank for new students)", "Class", "Student name", "Country", "AIMS number (optional)"], ...rows]);
+  ws["!cols"] = [{ wch: 22 }, { wch: 14 }, { wch: 36 }, { wch: 16 }, { wch: 20 }];
+  XLSX.utils.book_append_sheet(wb, ws, "Students");
+  const wc = XLSX.utils.aoa_to_sheet([["Order", "Class name"], ...cls.map((c, i) => [i + 1, c.name])]); wc["!cols"] = [{ wch: 8 }, { wch: 20 }];
+  XLSX.utils.book_append_sheet(wb, wc, "Classes");
+  XLSX.writeFile(wb, `Class_List_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+/** Reads the workbook and works out exactly what would change. Nothing is written here. */
+function planImport(wb) {
+  const sheet = wb.Sheets["Students"] || wb.Sheets[wb.SheetNames[0]];
+  const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+  const hi = grid.findIndex((r) => r.some((c) => /student name/i.test(String(c))));
+  if (hi < 0) throw new Error("Could not find the header row. Use the template (it has a 'Student name' column).");
+  const head = grid[hi].map((c) => key(c)), col = (re) => head.findIndex((c) => re.test(c));
+  const cId = col(/student id/), cCls = col(/^class/), cName = col(/student name|^name/), cCty = col(/country/), cAims = col(/aims/);
+  if (cCls < 0 || cName < 0) throw new Error("The sheet needs 'Class' and 'Student name' columns.");
+  const rows = []; const errors = [];
+  grid.slice(hi + 1).forEach((r, i) => {
+    const name = norm(r[cName]), cls = norm(r[cCls]);
+    if (!name && !cls) return;
+    if (!name || !cls) { errors.push(`Row ${hi + 2 + i}: ${!name ? "name" : "class"} is missing.`); return; }
+    rows.push({ line: hi + 2 + i, id: cId >= 0 ? norm(r[cId]) : "", cls, name, country: cCty >= 0 ? norm(r[cCty]) : "", aims: cAims >= 0 ? norm(r[cAims]) : "" });
+  });
+  // classes: from the Classes sheet if present (that order), else order of first appearance
+  let classNames = [];
+  if (wb.Sheets["Classes"]) {
+    classNames = XLSX.utils.sheet_to_json(wb.Sheets["Classes"], { header: 1, defval: "" }).slice(1).filter((r) => norm(r[1])).sort((a, b) => (+a[0] || 99) - (+b[0] || 99)).map((r) => norm(r[1]));
+  }
+  for (const r of rows) if (!classNames.some((c) => key(c) === key(r.cls))) { if (wb.Sheets["Classes"]) errors.push(`Row ${r.line}: class "${r.cls}" is not on the Classes sheet.`); else classNames.push(r.cls); }
+  if (!rows.length) errors.push("No students found in the sheet.");
+  const seen = new Map();
+  for (const r of rows) { const k = key(r.name) + "|" + key(r.cls); if (seen.has(k)) errors.push(`Row ${r.line}: "${r.name}" appears twice in ${r.cls} (also row ${seen.get(k)}).`); else seen.set(k, r.line); }
+  if (errors.length) return { errors };
+  // classes
+  const haveCls = S.classes, clsOps = []; const idOf = {};
+  classNames.forEach((n, i) => {
+    const ex = haveCls.find((c) => key(c.name) === key(n));
+    if (ex) { idOf[key(n)] = ex.id; if (ex.order !== i + 1) clsOps.push({ id: ex.id, set: { order: i + 1 } }); }
+    else { let id = slug(n); while (haveCls.some((c) => c.id === id) || Object.values(idOf).includes(id)) id += "_" + Math.random().toString(36).slice(2, 5); idOf[key(n)] = id; clsOps.push({ id, set: { name: n, order: i + 1 }, isNew: true }); }
+  });
+  // students
+  const have = S.students, byId = Object.fromEntries(have.map((s) => [s.id, s])), used = new Set();
+  const added = [], moved = [], edited = [], returned = [], ops = [];
+  const clsName = (id) => (haveCls.find((c) => c.id === id) || {}).name || id;
+  const findByName = (n) => have.filter((s) => !used.has(s.id) && key(s.name) === key(n)).sort((a, b) => (b.active !== false) - (a.active !== false))[0];
+  for (const r of rows) {
+    const classId = idOf[key(r.cls)];
+    let ex = r.id && byId[r.id] && !used.has(r.id) ? byId[r.id] : findByName(r.name);
+    if (!ex) {
+      let id = classId + "_n" + Math.random().toString(36).slice(2, 8);
+      added.push(`${r.name} (${r.cls})`);
+      ops.push({ id, data: { name: r.name, country: r.country, aims: r.aims, classId, active: true }, isNew: true }); continue;
+    }
+    used.add(ex.id);
+    const up = {};
+    if (ex.name !== r.name) { up.name = r.name; edited.push(`${ex.name} -> ${r.name}`); }
+    if (r.country && ex.country !== r.country) { up.country = r.country; }
+    if (ex.classId !== classId) { up.classId = classId; moved.push(`${r.name}: ${clsName(ex.classId)} -> ${r.cls}`); }
+    if (r.aims && ex.aims !== r.aims) up.aims = r.aims;
+    if (ex.active === false) { up.active = true; returned.push(r.name); }
+    if (Object.keys(up).length) ops.push({ id: ex.id, data: up });
+  }
+  const archived = have.filter((s) => s.active !== false && !used.has(s.id));
+  archived.forEach((s) => ops.push({ id: s.id, data: { active: false } }));
+  return { rows, clsOps, ops, added, moved, edited, returned, archived: archived.map((s) => `${s.name} (${clsName(s.classId)})`), total: rows.length, activeBefore: have.filter((s) => s.active !== false).length };
+}
+
+async function applyImport(p) {
+  const all = [...p.clsOps.map((c) => (b) => (c.isNew ? b.set(doc(db, "classes", c.id), c.set) : b.update(doc(db, "classes", c.id), c.set))),
+    ...p.ops.map((o) => (b) => (o.isNew ? b.set(doc(db, "students", o.id), o.data) : b.update(doc(db, "students", o.id), o.data)))];
+  for (let i = 0; i < all.length; i += 400) { const b = writeBatch(db); all.slice(i, i + 400).forEach((f) => f(b)); await b.commit(); }
+}
+
+function importDialog() {
+  if (typeof XLSX === "undefined") { toast("Excel library not loaded. Check the internet and try again."); return; }
+  modal((close) => {
+    const err = h("div", { class: "err" }), file = h("input", { type: "file", accept: ".xlsx,.xls", style: "display:none", onchange: async () => {
+      const f = file.files[0]; if (!f) return; err.textContent = "";
+      try {
+        const p = planImport(XLSX.read(await f.arrayBuffer(), { type: "array" }));
+        if (p.errors) { err.textContent = p.errors.slice(0, 8).join("\n"); err.style.whiteSpace = "pre-wrap"; return; }
+        close(); previewDialog(p);
+      } catch (e) { err.textContent = e.message || "Could not read that file."; }
+    } });
+    return [h("h3", {}, "Import class list"), h("div", { class: "muted" }, "Choose the Excel file you filled in from the template. You will see a preview before anything is saved."), file, err,
+      h("div", { class: "row" }, h("button", { class: "o", onclick: close }, "Cancel"), h("div", { class: "grow" }), h("button", { onclick: () => file.click() }, "Choose Excel file"))];
+  });
+}
+
+function previewDialog(p) {
+  const list = (t, a, bad) => a.length ? h("div", {}, h("div", { class: "b", style: bad ? { color: "var(--red)" } : {} }, `${t} (${a.length})`), h("div", { class: "muted" }, a.slice(0, 12).join("  |  ") + (a.length > 12 ? `  ... and ${a.length - 12} more` : ""))) : null;
+  const big = p.archived.length > Math.max(5, p.activeBefore / 2);
+  modal((close) => {
+    const err = h("div", { class: "err" }), ok = h("button", { onclick: async () => {
+      ok.disabled = true; ok.textContent = "Saving..."; try { await applyImport(p); toast("Class list updated."); close(); } catch (e) { err.textContent = friendly(e); ok.disabled = false; ok.textContent = "Apply changes"; }
+    } }, "Apply changes");
+    return [h("h3", {}, "Preview: nothing saved yet"), h("div", {}, `${p.total} students in the file, ${p.activeBefore} active now.`),
+      big ? h("div", { class: "err" }, `Warning: ${p.archived.length} current students are not in the file and would be archived. Check you uploaded the right file.`) : null,
+      list("New students", p.added), list("Moved to another class", p.moved), list("Name changed", p.edited), list("Coming back (were archived)", p.returned), list("Archived (left, records kept)", p.archived, true),
+      !p.added.length && !p.moved.length && !p.edited.length && !p.returned.length && !p.archived.length && !p.ops.length && !p.clsOps.length ? h("div", { class: "muted" }, "No changes: the app already matches this file.") : null,
+      err, h("div", { class: "row" }, h("button", { class: "o", onclick: close }, "Cancel"), h("div", { class: "grow" }), ok)];
   });
 }

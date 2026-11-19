@@ -13,6 +13,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-192.png">
 <title>Jamia Attendance</title>
+<script>try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <style>
 :root{
   /* iOS 27 system colours (Apple Design Resources) */
@@ -22,10 +23,15 @@
   --shadow:0 8px 24px rgba(0,0,0,.08);
   /* legacy names kept for inline use in app.js */
   --green:var(--tint);--cream:var(--bg);--sand:var(--sep);--sage:#8e8e93;--light:var(--fill);--err:var(--red)}
-@media (prefers-color-scheme:dark){:root{
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;
   --bg:#000;--card:#1c1c1e;--fill:rgba(120,120,128,.36);--fill2:rgba(120,120,128,.24);--sep:rgba(84,84,88,.6);
   --ink:#fff;--muted:#8e8e93;--glass:rgba(40,40,42,.6);--glass-edge:rgba(255,255,255,.12);--glass-line:rgba(255,255,255,.14);--lab-vib:#f2f2f7;
   --shadow:0 8px 24px rgba(0,0,0,.5)}}
+:root[data-theme=dark]{color-scheme:dark;
+  --bg:#000;--card:#1c1c1e;--fill:rgba(120,120,128,.36);--fill2:rgba(120,120,128,.24);--sep:rgba(84,84,88,.6);
+  --ink:#fff;--muted:#8e8e93;--glass:rgba(40,40,42,.6);--glass-edge:rgba(255,255,255,.12);--glass-line:rgba(255,255,255,.14);--lab-vib:#f2f2f7;
+  --shadow:0 8px 24px rgba(0,0,0,.5)}
+:root[data-theme=light]{color-scheme:light}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;letter-spacing:-.01em;-webkit-font-smoothing:antialiased}
 #app{max-width:900px;margin:0 auto;min-height:100vh;padding-bottom:calc(110px + env(safe-area-inset-bottom))}
@@ -80,6 +86,7 @@ table{border-collapse:collapse;width:100%}td,th{padding:9px 6px;text-align:left;
 <body>
 <div id="app"></div>
 <div id="overlay"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script type="module" src="app.js"></script>
 </body>
