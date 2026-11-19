@@ -8,6 +8,7 @@ import { S, ST } from "./core.js";
 import { h, $, toast, modal, confirmBox, chips, check, dateRow, appBar, pill, navBar, modalOpen } from "./ui.js";
 import { studentPdf, classPdf, reportPdf } from "./pdf.js";
 import { DEFAULT_SIG } from "./sigdata.js";
+import { SECTIONS, shown, show, progress, particularsPdf } from "./particulars.js";
 
 const app = initializeApp(firebaseConfig);
 let db;
@@ -29,7 +30,7 @@ const friendly = (e) => {
 
 // ---------- Firestore -> model ----------
 const arr = (v) => (Array.isArray(v) ? v : []);
-const mUser = (d) => { const x = d.data(); return { uid: d.id, name: x.name || "", username: x.username || "", role: x.role || "taker", activities: arr(x.activities), classes: arr(x.classes), active: x.active !== false, canEnterDuty: !!x.canEnterDuty, canClinic: !!x.canClinic, canLeave: !!x.canLeave, canCompetitions: !!x.canCompetitions }; };
+const mUser = (d) => { const x = d.data(); return { uid: d.id, name: x.name || "", username: x.username || "", role: x.role || "taker", activities: arr(x.activities), classes: arr(x.classes), active: x.active !== false, canEnterDuty: !!x.canEnterDuty, canClinic: !!x.canClinic, canLeave: !!x.canLeave, canCompetitions: !!x.canCompetitions, canParticulars: !!x.canParticulars }; };
 const mClass = (d) => ({ id: d.id, name: d.data().name || d.id, order: d.data().order || 0 });
 const mStudent = (d) => { const x = d.data(); return { id: d.id, name: x.name || "", country: x.country || "", aims: x.aims || "", classId: x.classId || "", active: x.active !== false }; };
 const mActivity = (d) => { const x = d.data(); return { id: d.id, name: x.name || d.id, group: x.group || "", type: x.type || "attendance", order: x.order || 0, active: x.active !== false, multi: !!x.multi }; };
@@ -130,11 +131,12 @@ function startData(u) {
   L(collection(db, "competition_results"), (s) => { S.compResults = s.docs.map((d) => { const x = d.data(); return { id: d.id, date: x.date || "", competitionId: x.competitionId || "", name: x.name || "", p1: arr(x.p1), p2: arr(x.p2), p3: arr(x.p3), by: x.by || "", byUid: x.byUid || "" }; }); render(); });
   L(doc(db, "config", "leaveRules"), (s) => { const x = s.data(), d = C.DEFAULT_LEAVE_RULES; S.leaveRules = s.exists() ? { thu: Array.isArray(x.thu) ? x.thu : d.thu, fri: Array.isArray(x.fri) ? x.fri : d.fri, sat: Array.isArray(x.sat) ? x.sat : d.sat } : d; render(); });
   L(doc(db, "users", u.uid), (s) => { if (s.exists()) { S.me = mUser(s); render(); } });
+  if (u.role === "housemaster" || u.canParticulars) L(collection(db, "particulars"), (s) => { S.particulars = {}; for (const d of s.docs) { const x = d.data(); S.particulars[d.id] = { d: x.d || {}, updatedAt: x.updatedAt && x.updatedAt.toDate ? x.updatedAt.toDate() : null, by: x.byName || "" }; } render(); });
   if (u.role === "housemaster") L(collection(db, "users"), (s) => { S.users = s.docs.map(mUser); render(); });
 }
 function stopData() {
   regs.forEach((r) => r()); regs = [];
-  Object.assign(S, { me: null, classes: [], students: [], activities: [], users: [], dutyRules: C.DEFAULT_DUTY_RULES, dutyDays: {}, sportsEx: [], clinic: [], leaves: [], leaveRules: C.DEFAULT_LEAVE_RULES, competitions: [], compResults: [], academicYear: C.DEFAULT_ACADEMIC_YEAR, signature: null });
+  Object.assign(S, { me: null, classes: [], students: [], activities: [], users: [], dutyRules: C.DEFAULT_DUTY_RULES, dutyDays: {}, sportsEx: [], clinic: [], leaves: [], leaveRules: C.DEFAULT_LEAVE_RULES, competitions: [], compResults: [], particulars: {}, academicYear: C.DEFAULT_ACADEMIC_YEAR, signature: null });
   liveStop();
 }
 // sessions for one date / one sheet
@@ -258,6 +260,8 @@ function pickStudents(state, key, { single = false, redraw } = {}) {
 // =====================================================================
 function takerRoot() {
   const me = S.me, v = view;
+  if (PV.has(v.name)) return particularsRouter(v);
+  if (partOnly()) return partHomeScreen();
   if (v.name === "duty") return dutyScreen(() => go("home"));
   if (v.name === "leave") return leaveScreen(() => go("home"));
   if (v.name === "clinic") return clinicScreen(() => go("home"));
@@ -280,8 +284,9 @@ function takerRoot() {
       me.canLeave ? box("Leave", () => go("leave")) : null,
       me.canClinic ? box("Sick Leave", () => go("clinic")) : null,
       me.canCompetitions ? box("Majlis-e-Ilmi competitions", () => go("comps")) : null,
+      me.canParticulars ? box("Student particulars", () => go("pHome"), "Enter and view students' personal records.") : null,
       me.activities.includes(C.SPORTS_ID) ? box("Duty & Permissions", () => go("sports")) : null,
-      (!myActs.length || !myCls.length) && !me.canEnterDuty && !me.canClinic && !me.canLeave && !me.canCompetitions ? h("div", { class: "err" }, "No activities or classes are assigned to your account yet. Please ask the housemaster.") : null,
+      (!myActs.length || !myCls.length) && !me.canEnterDuty && !me.canClinic && !me.canLeave && !me.canCompetitions && !me.canParticulars ? h("div", { class: "err" }, "No activities or classes are assigned to your account yet. Please ask the housemaster.") : null,
       myActs.length && myCls.length ? [
         h("div", { class: "b" }, "1. Date"), dateRow(v.date, (d) => { v.date = d; render(); }),
         h("div", { class: "b" }, "2. What are you recording?"),
@@ -395,9 +400,11 @@ function hmRoot() {
   const menu = () => modal((close) => [h("h3", {}, "Menu"),
     ...[["students", "Students", "Add, edit, transfer or archive students"], ["people", "Attendance takers", "Who records which activities"], ["more", "Settings", "Duty, leave, competitions, activities, academic year, signature, appearance"]]
       .map(([t, label, d]) => h("div", { class: "card tap", onclick: () => { close(); go("home", { tab: t }); } }, h("div", { class: "b" }, label), h("div", { class: "muted" }, d))),
+    h("div", { class: "card tap", onclick: () => { close(); go("pHome"); } }, h("div", { class: "b" }, "Student particulars"), h("div", { class: "muted" }, "Personal records: enter, view and export as PDF")),
     h("div", { class: "card tap", onclick: () => { close(); switchAccount(); } }, h("div", { class: "b" }, "Switch account"), h("div", { class: "muted" }, "Change to another saved account or add one")),
     h("div", { class: "card tap", onclick: () => { close(); logout(); } }, h("div", { class: "b" }, "Sign out"), h("div", { class: "muted" }, "Log out of this account")),
     h("button", { class: "o", onclick: close }, "Close")]);
+  if (PV.has(v.name)) return particularsRouter(v);
   if (v.name === "sheet") return sheetDetail(v);
   if (v.name === "record") return recordScreen(v);
   if (v.name === "duty") return dutyScreen(() => go("home", { tab: "more" }));
@@ -553,23 +560,23 @@ function peopleTab(v) {
   const people = S.users.filter((u) => u.role !== "housemaster").sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
   return h("div", { class: "pad" }, h("button", { onclick: () => personDialog(null) }, "Add attendance taker"),
     people.map((p) => h("div", { class: "card tap", onclick: () => personDialog(p) },
-      h("div", { class: "b" }, p.name + (p.canEnterDuty ? "   (enters duty list)" : "") + (p.canClinic ? "   (Jamia Clinic)" : "") + (p.canLeave ? "   (Leave)" : "") + (p.canCompetitions ? "   (Competitions)" : "") + (p.active ? "" : "   [inactive]")),
+      h("div", { class: "b" }, p.name + (p.canEnterDuty ? "   (enters duty list)" : "") + (p.canClinic ? "   (Jamia Clinic)" : "") + (p.canLeave ? "   (Leave)" : "") + (p.canCompetitions ? "   (Competitions)" : "") + (p.canParticulars ? "   (Particulars)" : "") + (p.active ? "" : "   [inactive]")),
       h("div", { class: "muted" }, "Username: " + displayUsername(p.username)),
       h("div", { class: "muted" }, "Records: " + (p.activities.map((i) => A[i]).filter(Boolean).join(", ") || "nothing")),
       h("div", { class: "muted" }, "Classes: " + (p.classes.includes("*") ? "All classes" : p.classes.map((i) => K[i]).filter(Boolean).join(", ") || "none")))));
 }
-async function createTaker(name, username, password, activities, classes, canEnterDuty, canClinic, canLeave, canCompetitions) {
+async function createTaker(name, username, password, activities, classes, canEnterDuty, canClinic, canLeave, canCompetitions, canParticulars) {
   let app2; try { app2 = (await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js")).getApp("secondary"); } catch { app2 = initializeApp(firebaseConfig, "secondary"); }
   const a2 = getAuth(app2), email = emailFor(username);
   const uid = (await createUserWithEmailAndPassword(a2, email, password)).user.uid;
   await signOut(a2);
-  await setDoc(doc(db, "users", uid), { name: name.trim(), username: email, role: "taker", active: true, activities, classes, canEnterDuty, canClinic, canLeave, canCompetitions });
+  await setDoc(doc(db, "users", uid), { name: name.trim(), username: email, role: "taker", active: true, activities, classes, canEnterDuty, canClinic, canLeave, canCompetitions, canParticulars: !!canParticulars });
 }
 function personDialog(init) {
   modal((close) => {
     const f = { name: init ? init.name : "", username: init ? displayUsername(init.username) : "", password: "", acts: new Set(init ? init.activities : []),
       all: init ? init.classes.includes("*") : false, cls: new Set(init ? init.classes.filter((c) => c !== "*") : []), duty: init ? init.canEnterDuty : false,
-      clinic: init ? init.canClinic : false, leave: init ? init.canLeave : false, comp: init ? init.canCompetitions : false, active: init ? init.active : true };
+      clinic: init ? init.canClinic : false, leave: init ? init.canLeave : false, comp: init ? init.canCompetitions : false, part: init ? init.canParticulars : false, active: init ? init.active : true };
     const body = h("div", { class: "pad", style: { padding: 0 } });
     const err = h("div", { class: "err" });
     const ids = (...g) => new Set(S.activities.filter((a) => a.active && g.includes(a.group)).map((a) => a.id));
@@ -586,9 +593,10 @@ function personDialog(init) {
            ["Duty list only", () => { f.acts = new Set(); f.all = false; f.cls = new Set(); f.duty = true; }],
            ["Jamia Clinic", () => { f.acts = new Set(); f.all = false; f.cls = new Set(); f.duty = false; f.clinic = true; f.leave = false; f.comp = false; }],
            ["Leave", () => { f.acts = new Set(); f.all = false; f.cls = new Set(); f.duty = false; f.clinic = false; f.leave = true; f.comp = false; }],
-           ["Competitions", () => { f.acts = new Set(); f.all = false; f.cls = new Set(); f.duty = false; f.clinic = false; f.leave = false; f.comp = true; }]]
+           ["Competitions", () => { f.acts = new Set(); f.all = false; f.cls = new Set(); f.duty = false; f.clinic = false; f.leave = false; f.comp = true; f.part = false; }],
+           ["Particulars", () => { f.acts = new Set(); f.all = false; f.cls = new Set(); f.duty = false; f.clinic = false; f.leave = false; f.comp = false; f.part = true; }]]
             .map(([l, fn]) => h("button", { class: "o", onclick: () => { fn(); draw(); } }, l))),
-        check("Can enter the security duty list", f.duty, (on) => (f.duty = on)), check("Jamia Clinic (records Sick Leave)", f.clinic, (on) => (f.clinic = on)), check("Leave (records Jamia off-campus leave)", f.leave, (on) => (f.leave = on)), check("Competitions (enters Majlis-e-Ilmi results)", f.comp, (on) => (f.comp = on)),
+        check("Can enter the security duty list", f.duty, (on) => (f.duty = on)), check("Jamia Clinic (records Sick Leave)", f.clinic, (on) => (f.clinic = on)), check("Leave (records Jamia off-campus leave)", f.leave, (on) => (f.leave = on)), check("Competitions (enters Majlis-e-Ilmi results)", f.comp, (on) => (f.comp = on)), check("Particulars (enters and views student personal records, including health details)", f.part, (on) => (f.part = on)),
         h("div", { class: "b" }, "Can record"),
         [...new Set(S.activities.filter((a) => a.active).map((a) => a.group))].map((g) => [h("div", { class: "muted" }, g), S.activities.filter((a) => a.active && a.group === g).map((a) => check(a.name, f.acts.has(a.id), (on) => (on ? f.acts.add(a.id) : f.acts.delete(a.id))))]),
         h("div", { class: "b" }, "For these classes"), check("All classes", f.all, (on) => { f.all = on; draw(); }),
@@ -598,18 +606,120 @@ function personDialog(init) {
     draw();
     const save = h("button", { onclick: async () => {
       const canRec = f.acts.size && (f.all || f.cls.size);
-      if (!f.name.trim() || !(canRec || f.duty || f.clinic || f.leave || f.comp)) { err.textContent = "Add a name and at least one thing this person can do."; return; }
+      if (!f.name.trim() || !(canRec || f.duty || f.clinic || f.leave || f.comp || f.part)) { err.textContent = "Add a name and at least one thing this person can do."; return; }
       if (!init && (f.username.trim().length < 3 || f.password.length < 6)) { err.textContent = "Username 3+ characters and password 6+ characters."; return; }
       save.disabled = true; err.textContent = "";
       const classes = f.all ? ["*"] : [...f.cls];
       try {
-        if (!init) await createTaker(f.name, f.username, f.password, [...f.acts], classes, f.duty, f.clinic, f.leave, f.comp);
-        else await updateDoc(doc(db, "users", init.uid), { name: f.name.trim(), activities: [...f.acts], classes, canEnterDuty: f.duty, canClinic: f.clinic, canLeave: f.leave, canCompetitions: f.comp, active: f.active });
+        if (!init) await createTaker(f.name, f.username, f.password, [...f.acts], classes, f.duty, f.clinic, f.leave, f.comp, f.part);
+        else await updateDoc(doc(db, "users", init.uid), { name: f.name.trim(), activities: [...f.acts], classes, canEnterDuty: f.duty, canClinic: f.clinic, canLeave: f.leave, canCompetitions: f.comp, canParticulars: f.part, active: f.active });
         close();
       } catch (e) { err.textContent = friendly(e); save.disabled = false; }
     } }, "Save");
     return [h("h3", {}, init ? "Edit person" : "Add person"), body, err, h("div", { class: "row" }, h("button", { class: "o", onclick: close }, "Cancel"), h("div", { class: "grow" }), save)];
   });
+}
+
+// ---------- Student particulars (personal records) ----------
+const PV = new Set(["pHome", "pFind", "pForm", "pView"]);
+const partOnly = () => { const m = S.me; return !!m && m.role !== "housemaster" && m.canParticulars && !m.activities.length && !m.canEnterDuty && !m.canClinic && !m.canLeave && !m.canCompetitions; };
+const partBack = () => (isHM() ? go("home", { tab: "today" }) : go("home"));
+const stuById = (id) => S.students.find((s) => s.id === id);
+function particularsRouter(v) {
+  if (v.name === "pFind") return partFind(v);
+  if (v.name === "pForm") return partForm(v);
+  if (v.name === "pView") return partView(v);
+  return partHomeScreen();
+}
+function partHomeScreen() {
+  const filled = S.students.filter((s) => s.active && S.particulars[s.id]).length, total = S.students.filter((s) => s.active).length;
+  const box = (t, d, fn) => h("div", { class: "card tap", onclick: fn }, h("div", { class: "b" }, t), h("div", { class: "muted" }, d));
+  return h("div", {}, appBar("Student particulars", S.me.name, partOnly() ? { actions: [["Switch", switchAccount], ["Sign out", logout]] } : { back: partBack }),
+    h("div", { class: "pad" },
+      box("Enter Record", "Search a student, fill in the form and save.", () => go("pFind", { mode: "enter" })),
+      box("View Record", "Search a student, open the record and export it as PDF.", () => go("pFind", { mode: "view" })),
+      h("div", { class: "muted" }, `${filled} of ${total} students have a record.`)));
+}
+function partFind(v) {
+  const enter = v.mode === "enter";
+  v.q ??= ""; v.cid ??= null;
+  const q = v.q.trim().toLowerCase();
+  const list = S.students.filter((s) => (!v.cid || s.classId === v.cid) && (!q || s.name.toLowerCase().includes(q)))
+    .sort((a, b) => (b.active - a.active) || a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+  const rows = q || v.cid ? list.slice(0, 40) : [];
+  const open = (s) => {
+    if (enter) go("pForm", { sid: s.id, from: v, after: "find" });
+    else if (S.particulars[s.id]) go("pView", { sid: s.id, from: v });
+    else toast("No record has been entered for this student yet.");
+  };
+  return h("div", {}, appBar(enter ? "Enter Record" : "View Record", "Find the student", { back: () => go("pHome") }),
+    h("div", { class: "pad" },
+      input("pq", { placeholder: "Search a student by name", value: v.q, oninput: (e) => { v.q = e.target.value; render(); } }),
+      chips([[null, "All classes"], ...S.classes.map((c) => [c.id, c.name])], v.cid, (id) => { v.cid = id; render(); }),
+      !q && !v.cid ? h("div", { class: "muted" }, "Type a name, or pick a class to see its students.") : null,
+      rows.map((s) => h("div", { class: "card tap", onclick: () => open(s) }, h("div", { class: "row" },
+        h("div", { class: "grow" }, h("div", { class: "b" }, s.name), h("div", { class: "muted" }, clsName(s.classId) + (s.active ? "" : "   [archived]"))),
+        S.particulars[s.id] ? pill("D", "Record entered") : pill("L", "Not entered")))),
+      (q || v.cid) && !list.length ? h("div", { class: "muted" }, "No student found.") : null,
+      rows.length && list.length > rows.length ? h("div", { class: "muted" }, `Showing the first ${rows.length} of ${list.length}. Type more of the name to narrow it down.`) : null));
+}
+function partForm(v) {
+  const st = stuById(v.sid), from = v.from;
+  if (!st) return h("div", { class: "pad" }, h("div", { class: "err" }, "Student not found."), h("button", { onclick: () => go("pHome") }, "Back"));
+  if (!v.f) { const rec = S.particulars[st.id]; v.f = { ...(rec ? rec.d : {}) }; if (!v.f.fullName) v.f.fullName = st.name; v.orig = JSON.stringify(v.f); }
+  const f = v.f, dirty = () => JSON.stringify(v.f) !== v.orig;
+  const leave = () => (v.after === "view" ? go("pView", { sid: st.id, from }) : go(from.name, from));
+  const back = () => (dirty() ? confirmBox("Discard changes?", "What you typed for this student has not been saved.", "Discard", leave, true) : leave());
+  const save = async () => {
+    if (v.saving) return;
+    const d = {};
+    for (const s of SECTIONS) for (const fd of s.fields) { const x = f[fd.k]; if (shown(fd, f) && x != null && String(x).trim() !== "") d[fd.k] = String(x).trim(); }
+    v.saving = true; v.err = ""; render();
+    try {
+      const p = setDoc(doc(db, "particulars", st.id), { studentId: st.id, d, updatedAt: serverTimestamp(), byUid: S.me.uid, byName: S.me.name });
+      await Promise.race([p, new Promise((r) => setTimeout(r, 4000))]);
+      p.catch(() => {});
+      toast("Saved: " + st.name);
+      if (v.after === "view") go("pView", { sid: st.id, from }); else { from.q = ""; go(from.name, from); }
+    } catch (e) { v.err = friendly(e); v.saving = false; render(); }
+  };
+  const field = (fd) => {
+    const val = f[fd.k] ?? "", dk = "pf_" + fd.k;
+    const pick = (x) => { f[fd.k] = val === x ? "" : x; render(); };
+    const ctl = fd.t === "area" ? h("textarea", { rows: 3, "data-k": dk, value: val, oninput: (e) => (f[fd.k] = e.target.value) })
+      : fd.t === "date" ? h("input", { type: "date", value: val, onchange: (e) => (f[fd.k] = e.target.value) })
+      : fd.t === "yn" ? chips([["yes", "Yes"], ["no", "No"]], val, pick)
+      : fd.t === "choice" ? chips(fd.opts.map((o) => [o, o]), val, pick)
+      : h("input", { type: "text", inputmode: fd.mode || null, autocomplete: "off", "data-k": dk, value: val, oninput: (e) => (f[fd.k] = e.target.value) });
+    return h("div", { class: "pf" }, h("div", { class: "muted" }, fd.l), ctl);
+  };
+  const [done, tot] = progress(f);
+  return h("div", {}, appBar("Particulars", st.name, { back, actions: [[v.saving ? "Saving..." : "Save", save]] }),
+    h("div", { class: "pad" },
+      h("div", { class: "muted" }, `${clsName(st.classId)}   |   ${done} of ${tot} fields filled. Everything is optional except what you choose to fill.`),
+      h("div", { class: "hscroll" }, SECTIONS.map((s, i) => h("button", { class: "chip", onclick: () => { const n = document.getElementById("sec_" + s.id); if (n) n.scrollIntoView({ behavior: "smooth", block: "start" }); } }, String(i + 1)))),
+      SECTIONS.map((s) => h("div", { class: "card", id: "sec_" + s.id },
+        h("div", { class: "b", style: s.confidential ? { color: "var(--red)" } : null }, s.title + (s.confidential ? "  (Confidential)" : "")),
+        h("div", { class: "pad", style: { padding: "10px 0 0" } }, s.fields.filter((fd) => shown(fd, f)).map(field)))),
+      v.err ? h("div", { class: "err" }, v.err) : null,
+      h("button", { disabled: v.saving, onclick: save }, v.saving ? "Saving..." : "Save record")));
+}
+function partView(v) {
+  const st = stuById(v.sid), rec = S.particulars[v.sid], from = v.from;
+  const back = () => go(from.name, from);
+  if (!st || !rec) return h("div", {}, appBar("Student record", st ? st.name : "", { back }), h("div", { class: "pad" }, h("div", { class: "muted" }, "No record has been entered for this student yet.")));
+  v.health ??= true;
+  const d = rec.d, cn = clsName(st.classId);
+  const when = rec.updatedAt ? `${rec.updatedAt.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}` : "";
+  return h("div", {}, appBar("Student record", st.name, { back }),
+    h("div", { class: "pad" },
+      h("div", { class: "muted" }, `${cn}${when ? "   |   Last updated " + when : ""}${rec.by ? " by " + rec.by : ""}`),
+      h("button", { onclick: () => savePdf(particularsPdf(st, d, { className: cn, updatedAt: rec.updatedAt, by: rec.by }, { includeHealth: v.health }), `particulars_${st.name.replace(/[^A-Za-z0-9]+/g, "_")}.pdf`) }, "Export PDF"),
+      check("Include the confidential health section in the PDF", v.health, (on) => { v.health = on; render(); }),
+      h("button", { class: "o", onclick: () => go("pForm", { sid: st.id, from, after: "view" }) }, "Edit record"),
+      SECTIONS.map((s) => h("div", { class: "card" },
+        h("div", { class: "b", style: s.confidential ? { color: "var(--red)" } : null }, s.title + (s.confidential ? "  (Confidential)" : "")),
+        s.fields.filter((fd) => shown(fd, d)).map((fd) => { const t = show(fd, d[fd.k]); return h("div", { class: "pv" }, h("div", { class: "muted" }, fd.l), t ? h("div", { class: "v" }, t) : h("div", { class: "muted" }, "-")); })))));
 }
 
 // ---------- reports ----------
