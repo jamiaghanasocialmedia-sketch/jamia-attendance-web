@@ -79,6 +79,10 @@ export function buildHistories(b) {
 const tokens = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter(Boolean);
 const keyOf = (s) => tokens(s).sort().join(" ");
 const dice = (a, b) => { const A = new Set(tokens(a)), B = new Set(tokens(b)); if (!A.size || !B.size) return 0; let n = 0; for (const t of A) if (B.has(t)) n++; return 2 * n / (A.size + B.size); };
+/** spelling-tolerant score: compares the letters only (so "Lungipaa" ~ "Lungi Pa"), with the words in either order */
+const bg = (t) => { const m = new Map(); for (let i = 0; i < t.length - 1; i++) { const g = t.slice(i, i + 2); m.set(g, (m.get(g) || 0) + 1); } return m; };
+const cdice = (a, b) => { const x = bg(a), y = bg(b); let n = 0, tx = 0, ty = 0; for (const v of x.values()) tx += v; for (const v of y.values()) ty += v; for (const [g, v] of x) n += Math.min(v, y.get(g) || 0); return tx + ty ? 2 * n / (tx + ty) : 0; };
+const fuzzy = (a, b) => { const ta = tokens(a), tb = tokens(b); return Math.max(dice(a, b), cdice(ta.join(""), tb.join("")), cdice([...ta].sort().join(""), [...tb].sort().join(""))); };
 /** students = [{id,name}], names = {examId: name}. -> { matched:[{sid,name,ids}], suggested:[{sid,name,ids,examName,score}], unmatched:[{sid,name}] } */
 export function matchStudents(students, names) {
   const byKey = {}; for (const [id, n] of Object.entries(names)) (byKey[keyOf(n)] ||= []).push(id);
@@ -87,8 +91,8 @@ export function matchStudents(students, names) {
     const ids = byKey[keyOf(s.name)];
     if (ids && ids.length) { matched.push({ sid: s.id, name: s.name, ids }); continue; }
     let best = null, bs = 0;
-    for (const [id, n] of Object.entries(names)) { const sc = dice(s.name, n); if (sc > bs) { bs = sc; best = { id, n }; } }
-    if (best && bs >= 0.66) suggested.push({ sid: s.id, name: s.name, ids: [best.id], examName: best.n, score: bs });
+    for (const [id, n] of Object.entries(names)) { const sc = fuzzy(s.name, n); if (sc > bs) { bs = sc; best = { id, n }; } }
+    if (best && bs >= 0.7) suggested.push({ sid: s.id, name: s.name, ids: [best.id], examName: best.n, score: bs });
     else unmatched.push({ sid: s.id, name: s.name });
   }
   return { matched, suggested, unmatched };
