@@ -54,7 +54,7 @@ export function check(label, on, onChange, disabled = false) {
   return h("label", { class: "chk" }, h("input", { type: "checkbox", checked: on, disabled, onchange: (e) => onChange(e.target.checked) }), h("span", {}, label));
 }
 export function dateRow(value, onChange) {
-  return h("div", { class: "row" },
+  return h("div", { class: "row date" },
     h("button", { class: "o", onclick: () => onChange(shift(value, -1)) }, "<"),
     h("input", { type: "date", value, onchange: (e) => e.target.value && onChange(e.target.value) }),
     h("button", { class: "o", onclick: () => onChange(shift(value, 1)) }, ">"));

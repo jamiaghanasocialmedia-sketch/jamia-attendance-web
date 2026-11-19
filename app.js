@@ -422,8 +422,10 @@ function todayTab(v) {
       h("div", { class: "muted" }, `${cName(x.classId)}  -  ${C.leaveReasonLabel(x.reason)}  -  ${C.pretty(x.from)} to ${C.pretty(x.to)}`))) : h("div", {}, "Nobody is on off-campus leave on this day."), h("button", { class: "o", onclick: close }, "Close")]);
   };
   return h("div", { class: "pad" }, dateRow(v.date, (d) => { v.date = d; render(); }),
-    chips([["salat", "Salat"], ["other", "Jamia Activities"], ["sports", "Sports"], ["clean", "Cleanliness & Waqar-e-Amal"]], v.group, (g) => { v.group = g; render(); }),
-    h("div", { class: "row" }, h("button", { class: "o", onclick: showSick }, "Sick today"), h("button", { class: "o", onclick: showLeave }, "On leave today")),
+    h("div", { class: "hscroll" },
+      [["salat", "Salat"], ["other", "Jamia Activities"], ["sports", "Sports"], ["clean", "Cleanliness & Waqar-e-Amal"]].map(([id, label]) =>
+        h("button", { class: "chip" + (id === v.group ? " on" : ""), onclick: () => { v.group = id; render(); } }, label)),
+      h("button", { class: "chip act", onclick: showSick }, "Sick today"), h("button", { class: "chip act", onclick: showLeave }, "On leave today")),
     acts.map((a) => h("div", { class: "card" }, h("div", { class: "b" }, a.name),
       h("div", { class: "grid", style: { gridTemplateColumns: `repeat(${S.classes.length || 1},1fr)`, marginTop: "8px" } },
         S.classes.map((c, i) => {
