@@ -280,7 +280,7 @@ function takerRoot() {
   watchDate(v.date);
   const done = new Set(live.sessions.filter((s) => s.activityId === v.activityId).map((s) => s.classId));
   const box = (t, fn, d) => h("div", { class: "card" }, h("div", { class: "b" }, t), d ? h("div", { class: "muted" }, d) : null, h("div", { style: { marginTop: "8px" } }, h("button", { onclick: fn }, "Open")));
-  return h("div", {}, appBar("Take attendance", me.name, { actions: [["Switch", switchAccount], ["Sign out", logout]] }),
+  return h("div", {}, appBar("Take attendance", me.name, { menu: accountSettings }),
     h("div", { class: "pad" },
       me.canEnterDuty ? box("Security duty", () => go("duty"), "Enter who is on Day duty and Night duty.") : null,
       me.canLeave ? box("Leave", () => go("leave")) : null,
@@ -688,6 +688,12 @@ function examPreviewDialog(data) {
 
 
 // ---------- Registry (view only account) ----------
+function accountSettings() {
+  modal((close) => [h("h3", {}, "Settings"),
+    h("div", { class: "card tap", onclick: () => { close(); switchAccount(); } }, h("div", { class: "b" }, "Switch account"), h("div", { class: "muted" }, "Change to another saved account or add one")),
+    h("div", { class: "card tap", onclick: () => { close(); logout(); } }, h("div", { class: "b" }, "Sign out"), h("div", { class: "muted" }, "Log out of this account")),
+    h("button", { class: "o", onclick: close }, "Close")]);
+}
 function registryRoot() {
   const v = view;
   if (PV.has(v.name)) return particularsRouter(v);
@@ -695,8 +701,8 @@ function registryRoot() {
   if (v.name === "rReports") return h("div", {}, appBar("Student attendance report", S.me.name, { back: () => go("home") }), reportsTab(v));
   if (v.name === "eHome") return examHomeScreen(v);
   if (v.name === "eStudent") return examStudentScreen(v);
-  const box = (t, d, fn) => h("div", { class: "card tap", onclick: fn }, h("div", { class: "b" }, t), h("div", { class: "muted" }, d));
-  return h("div", {}, appBar("Registry", S.me.name, { actions: [["Switch", switchAccount], ["Sign out", logout]] }),
+  const box = (t, d, fn) => h("div", { class: "card tap", onclick: fn }, h("div", { class: "b" }, t));
+  return h("div", {}, appBar("ADMIN", null, { menu: accountSettings }),
     h("div", { class: "pad" },
       box("Student particulars", "View a student's personal record and download it as PDF.", () => go("pFind", { mode: "view" })),
       box("Student attendance report", "Search a student or a class, view the attendance report and download PDFs.", () => go("rReports")),
@@ -743,7 +749,7 @@ function particularsRouter(v) {
 function partHomeScreen() {
   const filled = S.students.filter((s) => s.active && S.particulars[s.id]).length, total = S.students.filter((s) => s.active).length;
   const box = (t, d, fn) => h("div", { class: "card tap", onclick: fn }, h("div", { class: "b" }, t), h("div", { class: "muted" }, d));
-  return h("div", {}, appBar("Student particulars", S.me.name, partOnly() ? { actions: [["Switch", switchAccount], ["Sign out", logout]] } : { back: partBack }),
+  return h("div", {}, appBar("Student particulars", S.me.name, partOnly() ? { menu: accountSettings } : { back: partBack }),
     h("div", { class: "pad" },
       box("Enter Record", "Search a student, fill in the form and save.", () => go("pFind", { mode: "enter" })),
       box("View Record", "Search a student, open the record and export it as PDF.", () => go("pFind", { mode: "view" })),
