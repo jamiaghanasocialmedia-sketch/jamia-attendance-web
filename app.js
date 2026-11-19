@@ -433,18 +433,23 @@ function todayTab(v) {
         h("button", { class: "chip" + (id === v.group ? " on" : ""), onclick: () => { v.group = id; render(); } }, label)),
       h("button", { class: "chip act", onclick: showSick }, "Sick today"), h("button", { class: "chip act", onclick: showLeave }, "On leave today")),
     acts.map((a) => h("div", { class: "card" }, h("div", { class: "b" }, a.name),
-      h("div", { class: "grid", style: { gridTemplateColumns: `repeat(${S.classes.length || 1},1fr)`, marginTop: "8px" } },
-        S.classes.map((c, i) => {
+      (() => { const tot = { late: 0, absent: 0, needs: 0, taken: 0 };
+      const cells = S.classes.map((c, i) => {
           const ss = live.sessions.filter((x) => x.classId === c.id && x.activityId === a.id).sort((x, y) => num(x) - num(y));
           const eff = ss.flatMap((x) => x.roster.map((id) => [C.effective(x, id, C.isInspection(a)), x.base === ST.A]));
           const late = eff.filter((e) => e[0] === ST.L).length, absent = eff.filter((e) => C.shownCode(e[0], e[1]) === ST.A).length, needs = eff.filter((e) => e[0] === ST.N).length;
+          if (ss.length) { tot.taken++; tot.late += late; tot.absent += absent; tot.needs += needs; }
           const label = !ss.length ? "" : late + absent + needs === 0 ? (ss.length > 1 ? `${ss.length}x OK` : "OK") : (ss.length > 1 ? `${ss.length}x ` : "") + [late ? late + "L" : "", absent ? absent + "A" : "", needs ? needs + "N" : ""].filter(Boolean).join(" ");
           return h("div", { class: "cell" + (ss.length ? " ok" : ""), title: c.name, onclick: () => {
             if (!ss.length) return;
             if (ss.length === 1) return go("sheet", { id: ss[0].id, back: v });
             modal((close) => [h("h3", {}, "Which sheet?"), ss.map((x) => h("button", { class: "o", onclick: () => { close(); go("sheet", { id: x.id, back: v }); } }, `Session ${num(x)}` + (x.title ? " - " + x.title : ""))), h("button", { class: "t", onclick: close }, "Close")]);
           } }, h("span", {}, String(i + 1)), label ? h("small", {}, label) : null);
-        })))));
+      });
+      const tag = (txt, bg) => h("span", { class: "sumtag", style: { background: bg } }, txt);
+      const tags = !tot.taken ? [] : (tot.late || tot.absent || tot.needs) ? [tot.late ? tag(`${tot.late} late`, "#FFEFC2") : null, tot.absent ? tag(`${tot.absent} absent`, "#F8D4D4") : null, tot.needs ? tag(`${tot.needs} need work`, "#FFE0B8") : null] : [tag("All OK", "#D6F5DE")];
+      const totalCell = h("div", { class: "sumcol" }, tags);
+      return h("div", { class: "grid", style: { gridTemplateColumns: `repeat(${S.classes.length || 1},1fr) auto`, marginTop: "8px" } }, cells, totalCell); })())));
 }
 
 function sheetDetail(v) {
