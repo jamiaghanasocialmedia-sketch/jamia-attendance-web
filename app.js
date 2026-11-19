@@ -9,7 +9,7 @@ import { h, $, toast, modal, confirmBox, chips, check, dateRow, appBar, pill, na
 import { studentPdf, classPdf, reportPdf } from "./pdf.js";
 import { DEFAULT_SIG } from "./sigdata.js";
 import { SECTIONS, shown, show, progress, particularsPdf } from "./particulars.js";
-import { buildHistories, matchStudents, entriesFor, examPdf, EXAM_NAME, fmtMark } from "./exams.js";
+import { buildHistories, matchStudents, entriesFor, leftovers, keyOf as examKey, examPdf, EXAM_NAME, fmtMark } from "./exams.js";
 
 const app = initializeApp(firebaseConfig);
 let db;
@@ -641,7 +641,7 @@ function examCard(st, v) {
       e.subs.map((s) => h("div", { class: "row" }, h("div", { class: "grow" }, s.n), h("div", { class: s.f ? "err b" : "b" }, fmtMark(s.m) + (s.f ? " *" : "")),
         e.e === "annual" ? h("div", { class: "muted" }, `(${fmtMark(s.a)} / ${fmtMark(s.b)})`) : null)),
       e.comp.length ? h("div", { class: "muted" }, "Compartment papers: " + e.comp.map((c) => `${c.n} ${fmtMark(c.m)} (${c.ok ? "passed" : "failed"})`).join(", ")) : null)),
-    h("button", { class: "o", onclick: () => savePdf(examPdf(st.name, clsName(st.classId), rec.entries, { semesters: v.sem }), `exams_${st.name.replace(/[^A-Za-z0-9]+/g, "_")}.pdf`) }, "Export exam results PDF"));
+    h("button", { class: "o", onclick: () => savePdf(examPdf(st.name, st.cls || clsName(st.classId), rec.entries, { semesters: v.sem }), `exams_${st.name.replace(/[^A-Za-z0-9]+/g, "_")}.pdf`) }, "Export exam results PDF"));
 }
 function examImportDialog() {
   modal((close) => {
@@ -664,6 +664,7 @@ function examPreviewDialog(data) {
     const go2 = h("button", { onclick: async () => {
       go2.disabled = true; err.textContent = "";
       const items = [...m.matched, ...sug.filter((x) => pick.has(x.sid))];
+      const rest = leftovers(data, new Set(items.flatMap((i) => i.ids)));
       try {
         for (let i = 0; i < items.length; i += 200) {
           const b = writeBatch(db);
@@ -673,10 +674,16 @@ function examPreviewDialog(data) {
           }
           await b.commit();
         }
-        close(); toast(`Exam results saved for ${items.length} students.`);
+        for (let i = 0; i < rest.length; i += 200) {
+          const b = writeBatch(db);
+          for (const it of rest.slice(i, i + 200)) b.set(doc(db, "exam_history", it.key), { studentId: it.key, name: it.name, entries: entriesFor(data.hist, it.ids), importedAt: serverTimestamp(), importedBy: S.me.name });
+          await b.commit();
+        }
+        close(); toast(`Exam results saved for ${items.length + rest.length} students.`);
       } catch (e) { err.textContent = friendly(e); go2.disabled = false; }
     } }, "Import");
     body.append(h("div", { class: "b" }, `${matchedN} students matched by name`),
+      h("div", { class: "muted" }, "Everyone else in the backup is also saved, so they can be found in the exam lookup. They do not appear in particulars or attendance reports."),
       h("div", { class: "muted" }, `${active.length} current students in the attendance system. ${Object.keys(data.names).length} students have exam results in the backup (all years).`),
       sug.length ? [h("div", { class: "b" }, `${sug.length} similar names: tick the ones that are the same person`),
         sug.map((x) => check(`${x.name}  =  ${x.examName} in the exams app`, pick.has(x.sid), (on) => (on ? pick.add(x.sid) : pick.delete(x.sid))))] : null,
@@ -708,30 +715,40 @@ function registryRoot() {
       box("Student attendance report", "Search a student or a class, view the attendance report and download PDFs.", () => go("rReports")),
       box("Student examination database", "View a student's exam results, download PDFs and update the exams database.", () => go("eHome"))));
 }
+const lastCls = (r) => { const e = r.entries[r.entries.length - 1]; return e ? e.cn : ""; };
+const lastYear = (r) => { const e = r.entries[r.entries.length - 1]; return e ? e.y : ""; };
+function examPeople() {
+  const real = new Set(Object.keys(S.examHist).filter((k) => !k.startsWith("x_")).map((k) => examKey(S.examHist[k].name)));
+  return Object.entries(S.examHist).filter(([k, r]) => r.entries.length && !(k.startsWith("x_") && real.has(examKey(r.name))))
+    .map(([k, r]) => { const st = stuById(k); return { key: k, name: st ? st.name : r.name, alt: r.name, cls: lastCls(r), year: lastYear(r), active: st ? st.active : false }; });
+}
 function examHomeScreen(v) {
-  v.q ??= ""; v.cid ??= null;
-  const q = v.q.trim().toLowerCase(), have = Object.keys(S.examHist).length;
-  const list = S.students.filter((s) => (!v.cid || s.classId === v.cid) && (!q || s.name.toLowerCase().includes(q)))
-    .sort((a, b) => (b.active - a.active) || a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
-  const rows = q || v.cid ? list.slice(0, 40) : [];
+  v.q ??= ""; v.cls ??= null;
+  const all = examPeople(), have = all.length;
+  const q = v.q.trim().toLowerCase();
+  const order = (c) => { const i = S.classes.findIndex((x) => x.name === c); return i < 0 ? 999 : i; };
+  const clsList = [...new Set(all.map((p) => p.cls).filter(Boolean))].sort((x, y) => order(x) - order(y) || x.localeCompare(y));
+  const list = all.filter((p) => (!v.cls || p.cls === v.cls) && (!q || p.name.toLowerCase().includes(q) || p.alt.toLowerCase().includes(q)))
+    .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+  const rows = q || v.cls ? list.slice(0, 40) : [];
   return h("div", {}, appBar("Examination database", "Find a student", { back: () => go("home") }),
     h("div", { class: "pad" },
       h("div", { class: "card" }, h("div", { class: "b" }, "Update the exams database"),
         h("div", { class: "muted" }, `${have ? have + " students have exam results." : "No exam results yet."} After new exams are entered in the Jamia Exams Database, download its backup file and import it here.`),
         h("div", { style: { marginTop: "8px" } }, h("button", { onclick: examImportDialog }, "Import exams backup"))),
       input("eq", { placeholder: "Search a student by name", value: v.q, oninput: (e) => { v.q = e.target.value; render(); } }),
-      chips([[null, "All classes"], ...S.classes.map((c) => [c.id, c.name])], v.cid, (id) => { v.cid = id; render(); }),
-      !q && !v.cid ? h("div", { class: "muted" }, "Type a name, or pick a class to see its students.") : null,
-      rows.map((s) => h("div", { class: "card tap", onclick: () => go("eStudent", { sid: s.id, from: v }) }, h("div", { class: "row" },
-        h("div", { class: "grow" }, h("div", { class: "b" }, s.name), h("div", { class: "muted" }, clsName(s.classId) + (s.active ? "" : "   [archived]"))),
-        S.examHist[s.id] ? pill("D", "Has results") : pill("L", "No results")))),
-      (q || v.cid) && !list.length ? h("div", { class: "muted" }, "No student found.") : null,
+      chips([[null, "All classes"], ...clsList.map((c) => [c, c])], v.cls, (c) => { v.cls = c; render(); }),
+      !q && !v.cls ? h("div", { class: "muted" }, "Type a name, or pick a class to see its students.") : null,
+      rows.map((p) => h("div", { class: "card tap", onclick: () => go("eStudent", { sid: p.key, from: v }) }, h("div", { class: "row" },
+        h("div", { class: "grow" }, h("div", { class: "b" }, p.name), h("div", { class: "muted" }, `${p.cls}${p.year ? "   " + p.year : ""}`))))),
+      (q || v.cls) && !list.length ? h("div", { class: "muted" }, "No student found.") : null,
       rows.length && list.length > rows.length ? h("div", { class: "muted" }, `Showing the first ${rows.length} of ${list.length}. Type more of the name to narrow it down.`) : null));
 }
 function examStudentScreen(v) {
-  const st = stuById(v.sid), from = v.from;
-  if (!st) return h("div", { class: "pad" }, h("div", { class: "err" }, "Student not found."), h("button", { onclick: () => go("eHome") }, "Back"));
-  return h("div", {}, appBar(st.name, clsName(st.classId), { back: () => go(from.name, from) }), h("div", { class: "pad" }, examCard(st, v)));
+  const rec = S.examHist[v.sid], from = v.from;
+  if (!rec) return h("div", { class: "pad" }, h("div", { class: "err" }, "Student not found."), h("button", { onclick: () => go("eHome") }, "Back"));
+  const st = stuById(v.sid) || { id: v.sid, name: rec.name, cls: lastCls(rec) };
+  return h("div", {}, appBar(st.name, st.cls || lastCls(rec) || clsName(st.classId), { back: () => go(from.name, from) }), h("div", { class: "pad" }, examCard(st, v)));
 }
 
 // ---------- Student particulars (personal records) ----------

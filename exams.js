@@ -77,7 +77,7 @@ export function buildHistories(b) {
 
 // ---------- matching exam-app students to attendance-app students ----------
 const tokens = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter(Boolean);
-const keyOf = (s) => tokens(s).sort().join(" ");
+export const keyOf = (s) => tokens(s).sort().join(" ");
 const dice = (a, b) => { const A = new Set(tokens(a)), B = new Set(tokens(b)); if (!A.size || !B.size) return 0; let n = 0; for (const t of A) if (B.has(t)) n++; return 2 * n / (A.size + B.size); };
 /** spelling-tolerant score: compares the letters only (so "Lungipaa" ~ "Lungi Pa"), with the words in either order */
 const bg = (t) => { const m = new Map(); for (let i = 0; i < t.length - 1; i++) { const g = t.slice(i, i + 2); m.set(g, (m.get(g) || 0) + 1); } return m; };
@@ -96,6 +96,12 @@ export function matchStudents(students, names) {
     else unmatched.push({ sid: s.id, name: s.name });
   }
   return { matched, suggested, unmatched };
+}
+/** people in the backup who are not linked to a current student: grouped by name so a person registered twice appears once -> [{key, ids, name}] */
+export function leftovers(data, usedIds) {
+  const g = {};
+  for (const [id, n] of Object.entries(data.names)) if (!usedIds.has(id) && (data.hist[id] || []).length) (g[keyOf(n)] ||= []).push(id);
+  return Object.values(g).map((ids) => { ids.sort(); return { key: "x_" + ids[0], ids, name: ids.map((i) => data.names[i]).join(" / ") }; });
 }
 /** merge the histories of one or more exam ids (the same person registered twice) into one list, oldest first */
 export function entriesFor(hist, ids) {
