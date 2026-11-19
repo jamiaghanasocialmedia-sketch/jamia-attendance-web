@@ -849,7 +849,24 @@ function leaveScreen(back) {
   const valid = v.picked.size && v.to >= v.from;
   const current = S.leaves.filter((l) => l.to >= today).sort((a, b) => a.from.localeCompare(b.from) || ((B[a.studentId] || {}).name || "").toLowerCase().localeCompare(((B[b.studentId] || {}).name || "").toLowerCase()));
   const canDelete = (l) => isHM() || l.byUid === S.me.uid;
-  return h("div", {}, appBar("Jamia off-campus leave", S.me.name, { back }), h("div", { class: "pad" },
+  const tabChips = chips([["new", "New leave"], ["records", "Records"]], v.ltab || "new", (t) => { v.ltab = t; render(); });
+  const removeBtn = (l) => (canDelete(l) ? h("button", { class: "t", onclick: () => confirmBox("Remove this leave?", "The student will count normally again for these days.", "Remove", () => deleteDoc(doc(db, "leaves", l.id)), true) }, "Remove") : null);
+  if (v.ltab === "records") {
+    v.lq ??= ""; v.lr ??= "all";
+    const q = v.lq.trim().toLowerCase();
+    const all = S.leaves.filter((l) => (v.lr === "all" || l.reason === v.lr) && (!q || ((B[l.studentId] || {}).name || "").toLowerCase().includes(q)))
+      .sort((a, b) => b.from.localeCompare(a.from) || ((B[a.studentId] || {}).name || "").toLowerCase().localeCompare(((B[b.studentId] || {}).name || "").toLowerCase()));
+    const shown = all.slice(0, 100);
+    return h("div", {}, appBar("Jamia off-campus leave", S.me.name, { back }), h("div", { class: "pad" }, tabChips,
+      input("lq", { placeholder: "Search a student by name", value: v.lq, oninput: (e) => { v.lq = e.target.value; render(); } }),
+      chips([["all", "All reasons"], [C.LEAVE_LAST_SATURDAY, "Last Saturday"], [C.LEAVE_PERSONAL, "Personal"], [C.LEAVE_SICK, "Sick"], [C.LEAVE_DUTY, "Duty"], [C.LEAVE_SUMMER, "Summer Holidays"]], v.lr, (r) => { v.lr = r; render(); }),
+      h("div", { class: "b" }, `${all.length} leave record${all.length === 1 ? "" : "s"}` + (all.length > shown.length ? ` (showing the latest ${shown.length}; search to narrow)` : "")),
+      all.length ? null : h("div", { class: "muted" }, "No leave found."),
+      shown.map((l) => { const st = B[l.studentId]; return h("div", { class: "card" }, h("div", { class: "row" }, h("div", { class: "grow" }, h("div", { class: "b" }, st ? st.name : "?"),
+        h("div", { class: "muted" }, `${C.leaveReasonLabel(l.reason)}  |  ${C.pretty(l.from)} to ${C.pretty(l.to)}  (${C.leaveDays(l)} days)  |  ${clsName(l.classId)}`),
+        l.by ? h("div", { class: "muted" }, "Entered by " + l.by) : null), removeBtn(l))); })));
+  }
+  return h("div", {}, appBar("Jamia off-campus leave", S.me.name, { back }), h("div", { class: "pad" }, tabChips,
     h("div", { class: "b" }, "Reason"), chips([[C.LEAVE_LAST_SATURDAY, "Last Saturday Leave"], [C.LEAVE_PERSONAL, "Personal leave"], [C.LEAVE_SICK, "Sick leave"], [C.LEAVE_DUTY, "Duty leave"], [C.LEAVE_SUMMER, "Summer Holidays"]], v.reason, setReason),
     h("div", { class: "b" }, "From"), dateRow(v.from, (d) => { v.from = d; if (v.to < d) v.to = d; render(); }), h("div", { class: "b" }, "To"), dateRow(v.to, (d) => { v.to = d; render(); }),
     v.to < v.from ? h("div", { class: "err" }, "The last day must not be before the first day.") : null,
@@ -866,7 +883,7 @@ function leaveScreen(back) {
     h("h3", {}, `Away now or coming up (${current.length})`), current.length ? null : h("div", { class: "muted" }, "Nobody."),
     current.map((l) => { const st = B[l.studentId]; return h("div", { class: "card" }, h("div", { class: "row" }, h("div", { class: "grow" }, h("div", { class: "b" }, st ? st.name : "?"),
       h("div", { class: "muted" }, `${C.leaveReasonLabel(l.reason)}  |  ${C.pretty(l.from)} to ${C.pretty(l.to)}  (${C.leaveDays(l)} days)  |  ${clsName(l.classId)}`)),
-      canDelete(l) ? h("button", { class: "t", onclick: () => confirmBox("Remove this leave?", "The student will count normally again for these days.", "Remove", () => deleteDoc(doc(db, "leaves", l.id)), true) }, "Remove") : null)); })));
+      removeBtn(l))); })));
 }
 
 // ---------- Sick leave (Jamia Clinic) ----------
