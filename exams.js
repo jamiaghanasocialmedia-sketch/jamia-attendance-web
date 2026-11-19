@@ -52,6 +52,8 @@ function finalRemark(row, comps) { // the annual remark after any compartment pa
 }
 
 /** backup (parsed JSON) -> { names: {examId: name}, hist: {examId: [entry]} }. Entries are oldest first. */
+/** exam-app spellings that are corrected to the name used in the attendance system (key = sorted lower-case words) */
+const NAME_FIX = { "egyir suley": "Sulaiman Egyir Junior" };
 export function buildHistories(b) {
   if (!b || b.app !== "jamia-exams" || !b.results || !b.students) throw new Error("This is not a Jamia Exams Database backup file.");
   const rf = +(b.config || {}).repeatFrom || 99;
@@ -71,7 +73,7 @@ export function buildHistories(b) {
         pct: round2(row.pct), pos: row.pos, of: st.count, rem: exam === "annual" ? finalRemark(row, comps) : "", comp: cl, rep });
     }
   }
-  const names = {}; for (const id of Object.keys(hist)) names[id] = ((b.students[id] || {}).n || "").trim();
+  const names = {}; for (const id of Object.keys(hist)) { const n = ((b.students[id] || {}).n || "").trim(); names[id] = NAME_FIX[keyOf(n)] || n; }
   return { names, hist };
 }
 
