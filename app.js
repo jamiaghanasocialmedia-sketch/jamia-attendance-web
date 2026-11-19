@@ -1068,9 +1068,9 @@ function manageComps() {
 
 
 // ---------- Appearance ----------
-function themePref() { try { return localStorage.getItem("theme") || "auto"; } catch (e) { return "auto"; } }
+function themePref() { try { return localStorage.getItem("theme") || "light"; } catch (e) { return "light"; } }
 function setTheme(t) {
-  try { if (t === "auto") localStorage.removeItem("theme"); else localStorage.setItem("theme", t); } catch (e) { /* ignore */ }
+  try { localStorage.setItem("theme", t); } catch (e) { /* ignore */ }
   if (t === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", t);
 }
 
