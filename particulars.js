@@ -5,7 +5,6 @@ export const SECTIONS = [
   { id: "personal", title: "1. Personal Information", fields: [
     { k: "regNo", l: "Jamia Registration Number", t: "text" },
     { k: "fullName", l: "Full name", t: "text" },
-    { k: "preferredName", l: "Preferred name", t: "text" },
     { k: "dob", l: "Date of birth", t: "date" },
     { k: "pobCity", l: "Place of birth: town / city", t: "text" },
     { k: "pobRegion", l: "Place of birth: region / state", t: "text" },
