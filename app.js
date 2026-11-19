@@ -248,7 +248,7 @@ function pickStudents(state, key, { single = false, redraw } = {}) {
       const on = state[key].has(s.id);
       return h("div", { class: "stu", onclick: () => { if (single) state[key] = new Set(on ? [] : [s.id]); else on ? state[key].delete(s.id) : state[key].add(s.id); rd(); } },
         h("div", { class: "grow" }, h("div", { class: "b" }, s.name), q ? h("div", { class: "muted" }, clsName(s.classId)) : null),
-        h("span", { class: "pill", style: { background: on ? "var(--green)" : "#EDE8DB", color: on ? "var(--cream)" : "var(--muted)" } }, on ? "Picked" : "Tap"));
+        h("span", { class: "pill", style: { background: on ? "var(--tint)" : "var(--fill)", color: on ? "#fff" : "var(--muted)" } }, on ? "Picked" : "Tap"));
     }),
   ];
 }

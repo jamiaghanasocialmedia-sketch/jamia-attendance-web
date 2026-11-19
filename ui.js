@@ -13,6 +13,7 @@ export function h(tag, props, ...kids) {
     if (k === "class") e.className = v;
     else if (k === "style" && typeof v === "object") Object.assign(e.style, v);
     else if (k.startsWith("on")) e.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (k === "html") e.innerHTML = v;
     else if (k === "value") e.value = v;
     else if (k === "checked") e.checked = !!v;
     else e.setAttribute(k, v === true ? "" : v);
@@ -62,7 +63,7 @@ function shift(s, n) { const [y, m, d] = s.split("-").map(Number); const x = new
 
 export function appBar(title, sub, { back, actions = [] } = {}) {
   return h("div", { class: "bar" },
-    back ? h("button", { class: "t", onclick: back }, "< Back") : null,
+    back ? h("button", { class: "t", onclick: back }, "‹ Back") : null,
     h("div", { class: "grow" }, h("h1", {}, title), sub ? h("small", {}, sub) : null),
     actions.map(([label, fn]) => h("button", { class: "t", onclick: fn }, label)));
 }
