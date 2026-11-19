@@ -121,25 +121,35 @@ export function particularsPdf(student, d, meta = {}, opts = {}) {
     } else y = 40;
   };
   const room = (h) => { if (y + h > H - 44) { doc.addPage(); page(false); } };
-  page(true);
-  for (const s of SECTIONS) {
-    if (s.confidential && !includeHealth) continue;
-    room(18 + 30);
-    y += 6;
-    R(X, y, W - 2 * X, 18, GREEN);
-    T(s.title, X + 6, y + 12.5, { size: 10.5, bold: true, color: CREAM });
-    y += 24;
-    for (const f of s.fields) {
-      if (!shown(f, d) || f.k === "regNo") continue; // the registration number is already in the page header
-      const v = show(f, d[f.k]), vl = lines(v || "-", 10, W - X - VX), ll = lines(f.l, 8.5, LW);
-      const h = Math.max(vl.length * 12.5, ll.length * 11) + 6;
-      room(h);
-      ll.forEach((ln, i) => T(ln, X + 4, y + 9 + i * 11, { size: 8.5, color: GREY }));
-      vl.forEach((ln, i) => T(ln, VX, y + 10 + i * 12.5, { size: 10, bold: !!v, color: v ? [0, 0, 0] : GREY }));
-      y += h;
-      doc.setDrawColor(...LIGHT); doc.setLineWidth(0.5); doc.line(X, y - 2, W - X, y - 2);
+  // Always three pages: sections are placed on fixed pages and the spacing / type size is scaled so each page fits.
+  const GROUPS = [["personal", "jamaat"], ["parents", "emergency", "education", "languages"], ["family", "health", "interests"]];
+  const SCALES = [1.2, 1.15, 1.1, 1.05, 1, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6];
+  const secs = (ids) => ids.map((id) => SECTIONS.find((x) => x.id === id)).filter((x) => !(x.confidential && !includeHealth));
+  const rowsOf = (sec, sc) => sec.fields.filter((f) => shown(f, d) && f.k !== "regNo").map((f) => { // the registration number is already in the page header
+    const v = show(f, d[f.k]), vl = lines(v || "-", 10 * sc, W - X - VX), ll = lines(f.l, 8.5 * sc, LW);
+    return { v, vl, ll, h: Math.max(vl.length * 12.5 * sc, ll.length * 11 * sc) + 6 * sc };
+  });
+  const startY = (g) => (g === 0 ? 108 : 40);
+  const heightOf = (ids, sc) => secs(ids).reduce((t, sec) => t + 30 * sc + rowsOf(sec, sc).reduce((a, r) => a + r.h, 0), 0);
+  const sc = SCALES.find((c) => GROUPS.every((ids, g) => startY(g) + heightOf(ids, c) <= H - 44)) || SCALES[SCALES.length - 1];
+  GROUPS.forEach((ids, g) => {
+    if (g) doc.addPage();
+    page(g === 0);
+    for (const sec of secs(ids)) {
+      if (y + 30 * sc + 20 > H - 44) { doc.addPage(); page(false); } // only if a page is overfull
+      y += 6 * sc;
+      R(X, y, W - 2 * X, 18 * sc, GREEN);
+      T(sec.title, X + 6, y + 12.5 * sc, { size: 10.5 * sc, bold: true, color: CREAM });
+      y += 24 * sc;
+      for (const r of rowsOf(sec, sc)) {
+        if (y + r.h > H - 44) { doc.addPage(); page(false); }
+        r.ll.forEach((ln, k) => T(ln, X + 4, y + 9 * sc + k * 11 * sc, { size: 8.5 * sc, color: GREY }));
+        r.vl.forEach((ln, k) => T(ln, VX, y + 10 * sc + k * 12.5 * sc, { size: 10 * sc, bold: !!r.v, color: r.v ? [0, 0, 0] : GREY }));
+        y += r.h;
+        doc.setDrawColor(...LIGHT); doc.setLineWidth(0.5); doc.line(X, y - 2, W - X, y - 2);
+      }
     }
-  }
+  });
   const n = doc.getNumberOfPages();
   for (let i = 1; i <= n; i++) {
     doc.setPage(i);
