@@ -40,6 +40,9 @@ html,body{margin:0;color:var(--ink);font:17px/1.35 -apple-system,BlinkMacSystemF
 /* navigation bar: glass with a large title */
 .bar{position:sticky;top:calc(8px + env(safe-area-inset-top));margin:calc(8px + env(safe-area-inset-top)) 12px 0;z-index:5;background:var(--bar);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);display:flex;align-items:center;gap:8px;padding:12px 18px;border-radius:28px;box-shadow:0 12px 32px rgba(0,0,0,.16),0 2px 6px rgba(0,0,0,.08),inset 0 1px 0 var(--glass-edge),0 0 0 .5px var(--glass-line)}
 .bar h1{font-size:30px;font-weight:700;letter-spacing:-.02em;margin:0;line-height:1.12}.bar small{display:block;color:var(--muted);font-size:13px;letter-spacing:-.08px}
+.bar-sp{width:44px}
+button.t.menu{padding:8px;width:44px;height:44px;display:grid;place-items:center;border-radius:50%;background:var(--ctl);box-shadow:var(--ctl-shadow)}
+button.t.menu svg{width:22px;height:22px;fill:var(--tint)}
 .bar .grow{flex:1;min-width:0;text-align:center}
 .pad{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
 /* grouped-inset cards */

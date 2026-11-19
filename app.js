@@ -390,7 +390,12 @@ function rosterView(v) {
 // =====================================================================
 function hmRoot() {
   const v = view;
-  const tabs = [["today", "Today"], ["students", "Students"], ["people", "People"], ["reports", "Reports"], ["more", "More"]];
+  const tabs = [["today", "Today"], ["reports", "Reports"]];
+  const titles = { today: "Housemaster", reports: "Reports", students: "Students", people: "Attendance takers", more: "Settings" };
+  const menu = () => modal((close) => [h("h3", {}, "Menu"),
+    ...[["students", "Students", "Add, edit, transfer or archive students"], ["people", "Attendance takers", "Who records which activities"], ["more", "Settings", "Duty, leave, competitions, activities, academic year, signature, appearance"]]
+      .map(([t, label, d]) => h("div", { class: "card tap", onclick: () => { close(); go("home", { tab: t }); } }, h("div", { class: "b" }, label), h("div", { class: "muted" }, d))),
+    h("button", { class: "o", onclick: close }, "Close")]);
   if (v.name === "sheet") return sheetDetail(v);
   if (v.name === "record") return recordScreen(v);
   if (v.name === "duty") return dutyScreen(() => go("home", { tab: "more" }));
@@ -400,7 +405,8 @@ function hmRoot() {
   if (v.name === "comps") return compsScreen(() => go("home", { tab: "more" }));
   v.tab ||= "today";
   const body = { today: todayTab, students: studentsTab, people: peopleTab, reports: reportsTab, more: moreTab }[v.tab](v);
-  return h("div", {}, appBar("Housemaster", S.me.name), body, navBar(tabs, v.tab, (t) => { go("home", { tab: t }); }));
+  const inMenu = !tabs.some(([id]) => id === v.tab);
+  return h("div", {}, appBar(titles[v.tab] || "Housemaster", v.tab === "today" ? S.me.name : "", { menu, back: inMenu ? () => go("home", { tab: "today" }) : null }), body, navBar(tabs, v.tab, (t) => { go("home", { tab: t }); }));
 }
 
 function todayTab(v) {
@@ -438,8 +444,7 @@ function todayTab(v) {
             if (ss.length === 1) return go("sheet", { id: ss[0].id, back: v });
             modal((close) => [h("h3", {}, "Which sheet?"), ss.map((x) => h("button", { class: "o", onclick: () => { close(); go("sheet", { id: x.id, back: v }); } }, `Session ${num(x)}` + (x.title ? " - " + x.title : ""))), h("button", { class: "t", onclick: close }, "Close")]);
           } }, h("span", {}, String(i + 1)), label ? h("small", {}, label) : null);
-        })))),
-    h("div", { class: "muted" }, "Boxes 1-" + S.classes.length + " are the classes in order: " + S.classes.map((c, i) => `${i + 1} ${c.name}`).join(", ") + "."));
+        })))));
 }
 
 function sheetDetail(v) {
@@ -512,8 +517,7 @@ function studentDialog(init, defCls) {
 function peopleTab(v) {
   const A = Object.fromEntries(S.activities.map((a) => [a.id, a.name])), K = Object.fromEntries(S.classes.map((c) => [c.id, c.name]));
   const people = S.users.filter((u) => u.role !== "housemaster").sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
-  return h("div", { class: "pad" }, h("button", { onclick: () => personDialog(null) }, "Add person"),
-    h("div", { class: "muted" }, "Each person can only record the activities and classes you tick for them."),
+  return h("div", { class: "pad" }, h("button", { onclick: () => personDialog(null) }, "Add attendance taker"),
     people.map((p) => h("div", { class: "card tap", onclick: () => personDialog(p) },
       h("div", { class: "b" }, p.name + (p.canEnterDuty ? "   (enters duty list)" : "") + (p.canClinic ? "   (Jamia Clinic)" : "") + (p.canLeave ? "   (Leave)" : "") + (p.canCompetitions ? "   (Competitions)" : "") + (p.active ? "" : "   [inactive]")),
       h("div", { class: "muted" }, "Username: " + displayUsername(p.username)),
@@ -589,7 +593,14 @@ function reportsTab(v) {
   const subtitle = `${v.from} to ${v.to}  |  ${v.cid ? clsName(v.cid) : "All classes"}  |  ${labelFor(v.filter)}`;
   const rows = v.rows, ranks = rows ? C.classRanks(rows) : [];
   const run = async (fn) => { v.loading = true; v.err = ""; render(); try { await fn(); } catch (e) { v.err = friendly(e); } v.loading = false; render(); };
+  v.rq ??= "";
+  const rq = v.rq.trim().toLowerCase();
+  const found = rq ? S.students.filter((s) => s.name.toLowerCase().includes(rq)).sort((a, b) => (b.active - a.active) || a.name.toLowerCase().localeCompare(b.name.toLowerCase())).slice(0, 15) : [];
   return h("div", { class: "pad" },
+    input("rq", { placeholder: "Search a student's report by name", value: v.rq, oninput: (e) => { v.rq = e.target.value; render(); } }),
+    rq ? (found.length ? found.map((s) => h("div", { class: "card tap", onclick: () => go("record", { st: s, back: v }) }, h("div", { class: "row" },
+      h("div", { class: "grow" }, h("div", { class: "b" }, s.name), h("div", { class: "muted" }, clsName(s.classId) + (s.active ? "" : "   [archived]"))),
+      h("button", { class: "o" }, "Open report")))) : h("div", { class: "muted" }, "No student with that name.")) : null,
     h("div", { class: "b" }, "From"), dateRow(v.from, (d) => { v.from = d; render(); }), h("div", { class: "b" }, "To"), dateRow(v.to, (d) => { v.to = d; render(); }),
     h("div", { class: "b" }, "Class"), chips([[null, "All classes"], ...S.classes.map((c) => [c.id, c.name])], v.cid, (id) => { v.cid = id; v.rows = null; render(); }),
     h("div", { class: "b" }, "Activity"), chips([["all", "Everything"], ...groups.map((g) => ["g:" + g, g])], v.filter, (k) => { v.filter = k; render(); }),

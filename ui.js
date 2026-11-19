@@ -61,11 +61,12 @@ export function dateRow(value, onChange) {
 }
 function shift(s, n) { const [y, m, d] = s.split("-").map(Number); const x = new Date(y, m - 1, d + n); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; }
 
-export function appBar(title, sub, { back, actions = [] } = {}) {
+export function appBar(title, sub, { back, actions = [], menu } = {}) {
   return h("div", { class: "bar" },
-    back ? h("button", { class: "t", onclick: back }, "‹ Back") : null,
+    back ? h("button", { class: "t", onclick: back }, "\u2039 Back") : (menu ? h("div", { class: "bar-sp" }) : null),
     h("div", { class: "grow" }, h("h1", {}, title), sub ? h("small", {}, sub) : null),
-    actions.map(([label, fn]) => h("button", { class: "t", onclick: fn }, label)));
+    actions.map(([label, fn]) => h("button", { class: "t", onclick: fn }, label)),
+    menu ? h("button", { class: "t menu", "aria-label": "Menu", onclick: menu, html: `<svg viewBox="0 0 24 24"><path d="${ICONS.more}"/></svg>` }) : null);
 }
 
 export const pillColors = { D: "#D9E4F5", S: "#E6DCF3", V: "#FBE3CC", A: "#F8D4D4", L: "#FFEFC2", N: "#FFE0B8" };
