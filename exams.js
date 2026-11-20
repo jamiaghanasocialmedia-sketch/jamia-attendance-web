@@ -175,7 +175,7 @@ export function examPdf(studentName, className, entries, opts = {}) {
     table(sumCols, list.map((e) => ({ c: [e.y, e.cn + (e.rep ? " (R)" : ""), e.roll, EXAM_NAME[e.e].replace(" Semester", " Sem"), `${fmtMark(e.total)} / ${e.max}`, e.pct.toFixed(2), `${e.pos} of ${e.of}`,
       e.comp.length ? e.comp.map((c) => `${c.n} ${fmtMark(c.m)}`).join(", ") : "-", e.rem ? (e.rem === "Comp." ? "Comp." : e.rem === "Passed after compartment" ? "Pass (comp.)" : e.rem === "Failed compartment" ? "Failed comp." : e.rem) : "-"] })), { preH: 0 });
     y += 16;
-    // best and lowest performing subject (average % of the marks over the annual results)
+    // best and lowest performing subjects (average % of the marks over the annual results) and class standing
     const ann = (entries.filter((e) => e.e === "annual").length ? entries.filter((e) => e.e === "annual") : list);
     const bySub = {}, SKIP = ["arabic muhadithah", "english muhadithah", "urdu muhadithah", "ruhani khazain", "deeni maloomat", "khutbat e imam"]; // not counted in the best/lowest summary
     const norm = (t) => t.toLowerCase().replace(/[^a-z ]+/g, " ").replace(/\s+/g, " ").trim().replace(/khaza in/, "khazain");
@@ -184,20 +184,32 @@ export function examPdf(studentName, className, entries, opts = {}) {
     const need = Math.max(2, Math.ceil(Math.max(0, ...subs.map((o) => o.r.length)) / 2)); // judge only subjects taken in at least half of the exams
     if (subs.some((o) => o.r.length >= need)) subs = subs.filter((o) => o.r.length >= need);
     if (subs.length >= 2) {
-      const best = subs.reduce((a, b) => (b.avg > a.avg ? b : a)), low = subs.reduce((a, b) => (b.avg < a.avg ? b : a));
-      const card = (x0, w, title, o, hi, tone) => {
-        const bh = 64; R(x0, y, w, bh, tone); doc.setDrawColor(...SAND); doc.setLineWidth(0.5); doc.rect(x0, y, w, bh, "S");
+      const sorted = subs.slice().sort((a, b) => b.avg - a.avg), k = Math.min(3, Math.floor(sorted.length / 2));
+      const top = sorted.slice(0, k), bottom = sorted.slice(-k).reverse();
+      const card = (x0, w, title, rows, tone) => {
+        const bh = 16 + rows.length * 15 + 6; R(x0, y, w, bh, tone); doc.setDrawColor(...SAND); doc.setLineWidth(0.5); doc.rect(x0, y, w, bh, "S");
         T(title.toUpperCase(), x0 + 10, y + 14, { size: 8, bold: true, color: GREEN });
-        T(o.n, x0 + 10, y + 32, { size: 13, bold: true });
-        const pick = o.r.reduce((a, b) => ((hi ? b.p > a.p : b.p < a.p) ? b : a));
-        T(`Average ${o.avg.toFixed(1)}% over ${o.r.length} exam${o.r.length === 1 ? "" : "s"}`, x0 + 10, y + 46, { size: 8.5, color: GREY });
-        T(`${hi ? "Highest" : "Lowest"}: ${fmtMark(pick.m)} / ${pick.max} (${pick.y})`, x0 + 10, y + 58, { size: 8.5, color: GREY });
+        rows.forEach((o, i) => { T(`${i + 1}.  ${clip(o.n, 9.5, w - 100)}`, x0 + 10, y + 30 + i * 15, { size: 9.5, bold: true }); T(`${o.avg.toFixed(1)}%`, x0 + w - 10, y + 30 + i * 15, { size: 9.5, align: "right" }); });
+        return bh;
       };
-      ensure(100); heading("Subject summary");
+      ensure(150); heading("Subject summary");
       const gw = (W - 2 * X - 12) / 2;
-      card(X, gw, "Best performing subject", best, true, [236, 244, 236]);
-      card(X + gw + 12, gw, "Lowest performing subject", low, false, [250, 238, 232]);
-      y += 64 + 16;
+      const h1 = card(X, gw, "Best performing subjects", top, [236, 244, 236]);
+      card(X + gw + 12, gw, "Lowest performing subjects", bottom, [250, 238, 232]);
+      y += h1 + 6;
+      T("Average % of the marks over the annual results; only subjects taken in at least half of the years are compared.", X, y + 8, { size: 7, italic: true, color: GREY });
+      y += 18;
+    }
+    // class standing: rank as a share of the class size, so small and large classes can be compared
+    const pc = ann.filter((e) => e.pos && e.of).map((e) => ({ y: e.y, v: Math.max(1, Math.round(e.pos / e.of * 100)) }));
+    if (pc.length) {
+      const avg = Math.max(1, Math.round(pc.reduce((a, x) => a + x.v, 0) / pc.length));
+      const bst = pc.reduce((a, b) => (b.v < a.v ? b : a)), wst = pc.reduce((a, b) => (b.v > a.v ? b : a));
+      ensure(46); R(X, y, W - 2 * X, 36, [236, 244, 236]); doc.setDrawColor(...SAND); doc.setLineWidth(0.5); doc.rect(X, y, W - 2 * X, 36, "S");
+      T("CLASS STANDING", X + 10, y + 14, { size: 8, bold: true, color: GREEN });
+      T(`On average in the top ${avg}% of his class`, X + 10, y + 28, { size: 10, bold: true });
+      if (pc.length > 1) T(`Best: top ${bst.v}% (${bst.y})     Lowest: top ${wst.v}% (${wst.y})`, W - X - 10, y + 28, { size: 8.5, color: GREY, align: "right" });
+      y += 36 + 16;
     }
     // charts
     const chart = (title, labels, vals, o) => {
@@ -220,6 +232,32 @@ export function examPdf(studentName, className, entries, opts = {}) {
     const labels = list.map((e) => e.cn + (e.e === "annual" ? "" : e.e === "s1" ? " S1" : " S2"));
     chart("Class position", labels, list.map((e) => e.pos), { invert: true, fmt: (v) => String(v) });
     chart("Percentage", labels, list.map((e) => e.pct), { fmt: (v) => v.toFixed(1) + "%" });
+  }
+
+  // subject x year grid, coloured by performance
+  if (list.length) {
+    const ga = (entries.filter((e) => e.e === "annual").length ? entries.filter((e) => e.e === "annual") : list);
+    const yrs = [...new Set(ga.map((e) => e.y))], names = [], cell = {};
+    for (const e of ga) for (const sb of e.subs) if (sb.max > 0 && sb.m != null) { const k = sb.n.trim(); if (!names.includes(k)) names.push(k); cell[k + "|" + e.y] = sb.m / sb.max * 100; }
+    if (names.length && yrs.length) {
+      const rh = 14, labW = 130, cw = Math.min(54, (W - 2 * X - labW) / yrs.length), gw = labW + cw * yrs.length;
+      if (y + 40 + (names.length + 1) * rh > H - 40) { doc.addPage(); page(false); }
+      heading("Subject performance by year");
+      const tone = (v) => (v >= 90 ? [120, 190, 130] : v >= 80 ? [178, 220, 170] : v >= 70 ? [240, 232, 160] : v >= 60 ? [247, 200, 140] : [238, 150, 140]);
+      R(X, y, gw, 16, GREEN); T("Subject", X + 4, y + 11, { size: 8, bold: true, color: [255, 255, 255] });
+      yrs.forEach((yr, i) => T(yr, X + labW + cw * i + cw / 2, y + 11, { size: 7.5, bold: true, color: [255, 255, 255], align: "center" }));
+      y += 16;
+      names.forEach((nm) => {
+        if (y + rh > H - 40) { doc.addPage(); page(false); }
+        doc.setDrawColor(...SAND); doc.setLineWidth(0.5); doc.rect(X, y, labW, rh, "S");
+        T(clip(nm, 8, labW - 8), X + 4, y + 10, { size: 8 });
+        yrs.forEach((yr, i) => { const v = cell[nm + "|" + yr], x0 = X + labW + cw * i; if (v != null) R(x0, y, cw, rh, tone(v)); doc.rect(x0, y, cw, rh, "S"); if (v != null) T(v.toFixed(0), x0 + cw / 2, y + 10, { size: 8, align: "center" }); });
+        y += rh;
+      });
+      y += 6;
+      [[90, "90+"], [80, "80-89"], [70, "70-79"], [60, "60-69"], [0, "below 60"]].forEach(([v, lb], i) => { const x0 = X + i * 72; R(x0, y, 10, 8, tone(v === 0 ? 0 : v)); T(lb, x0 + 14, y + 7, { size: 7, color: GREY }); });
+      y += 22;
+    }
   }
 
   // one table per exam
