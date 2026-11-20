@@ -840,14 +840,12 @@ function partView(v) {
   const st = stuById(v.sid), rec = S.particulars[v.sid], from = v.from;
   const back = () => go(from.name, from);
   if (!st || !rec) return h("div", {}, appBar("Student record", st ? st.name : "", { back }), h("div", { class: "pad" }, h("div", { class: "muted" }, "No record has been entered for this student yet.")));
-  v.health ??= true;
   const d = rec.d, cn = clsName(st.classId);
   const when = rec.updatedAt ? `${rec.updatedAt.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}` : "";
   return h("div", {}, appBar("Student record", st.name, { back }),
     h("div", { class: "pad" },
       h("div", { class: "muted" }, `${cn}${when ? "   |   Last updated " + when : ""}${rec.by ? " by " + rec.by : ""}`),
-      h("button", { onclick: () => savePdf(particularsPdf(st, d, { className: cn, updatedAt: rec.updatedAt, by: rec.by }, { includeHealth: v.health }), `particulars_${st.name.replace(/[^A-Za-z0-9]+/g, "_")}.pdf`) }, "Export PDF"),
-      check("Include the confidential health section in the PDF", v.health, (on) => { v.health = on; render(); }),
+      h("button", { onclick: () => savePdf(particularsPdf(st, d, { className: cn, updatedAt: rec.updatedAt, by: rec.by }, { includeHealth: true }), `particulars_${st.name.replace(/[^A-Za-z0-9]+/g, "_")}.pdf`) }, "Export PDF"),
       isReg() ? null : h("button", { class: "o", onclick: () => go("pForm", { sid: st.id, from, after: "view" }) }, "Edit record"),
       SECTIONS.map((s) => h("div", { class: "card" },
         h("div", { class: "b", style: s.confidential ? { color: "var(--red)" } : null }, s.title + (s.confidential ? "  (Confidential)" : "")),
