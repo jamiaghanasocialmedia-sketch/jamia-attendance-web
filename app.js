@@ -417,7 +417,7 @@ function hmRoot() {
   v.tab ||= "today";
   const body = { today: todayTab, students: studentsTab, people: peopleTab, reports: reportsTab, more: moreTab }[v.tab](v);
   const inMenu = !tabs.some(([id]) => id === v.tab);
-  return h("div", {}, appBar(titles[v.tab] || "Housemaster", v.tab === "today" ? S.me.name : "", { menu, back: inMenu ? () => go("home", { tab: "today" }) : null }), body, navBar(tabs, v.tab, (t) => { go("home", { tab: t }); }));
+  return h("div", {}, appBar(titles[v.tab] || "Housemaster", "", { menu, back: inMenu ? () => go("home", { tab: "today" }) : null }), body, navBar(tabs, v.tab, (t) => { go("home", { tab: t }); }));
 }
 
 function todayTab(v) {
