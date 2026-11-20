@@ -61,12 +61,12 @@ export function dateRow(value, onChange) {
 }
 function shift(s, n) { const [y, m, d] = s.split("-").map(Number); const x = new Date(y, m - 1, d + n); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; }
 
-export function appBar(title, sub, { back, actions = [], menu } = {}) {
+export function appBar(title, sub, { back, actions = [], menu, menuLabel } = {}) {
   return h("div", { class: "bar" },
-    back ? h("button", { class: "t", onclick: back }, "\u2039 Back") : (menu ? h("div", { class: "bar-sp" }) : null),
+    back ? h("button", { class: "t", onclick: back }, "\u2039 Back") : (menu ? h("div", { class: "bar-sp" + (menuLabel ? " wide" : "") }) : null),
     h("div", { class: "grow" }, h("h1", {}, title), sub ? h("small", {}, sub) : null),
     actions.map(([label, fn]) => h("button", { class: "t", onclick: fn }, label)),
-    menu ? h("button", { class: "t menu", "aria-label": "Menu", onclick: menu, html: `<svg viewBox="0 0 24 24"><path d="${ICONS.more}"/></svg>` }) : null);
+    menu ? h("button", { class: "t menu" + (menuLabel ? " lbl" : ""), "aria-label": "Menu", onclick: menu, html: `<svg viewBox="0 0 24 24"><path d="${ICONS.more}"/></svg>` + (menuLabel ? `<span>${menuLabel}</span>` : "") }) : null);
 }
 
 export const pillColors = { D: "#D9E4F5", S: "#E6DCF3", V: "#FBE3CC", A: "#F8D4D4", L: "#FFEFC2", N: "#FFE0B8" };

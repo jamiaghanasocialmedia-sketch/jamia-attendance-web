@@ -696,7 +696,7 @@ function examPreviewDialog(data) {
 
 // ---------- Registry (view only account) ----------
 function accountSettings() {
-  modal((close) => [h("h3", {}, "Settings"),
+  modal((close) => [h("h3", {}, "Menu"),
     h("div", { class: "card tap", onclick: () => { close(); switchAccount(); } }, h("div", { class: "b" }, "Switch account"), h("div", { class: "muted" }, "Change to another saved account or add one")),
     h("div", { class: "card tap", onclick: () => { close(); logout(); } }, h("div", { class: "b" }, "Sign out"), h("div", { class: "muted" }, "Log out of this account")),
     h("button", { class: "o", onclick: close }, "Close")]);
@@ -708,12 +708,12 @@ function registryRoot() {
   if (v.name === "rReports") return h("div", {}, appBar("Student attendance report", S.me.name, { back: () => go("home") }), reportsTab(v));
   if (v.name === "eHome") return examHomeScreen(v);
   if (v.name === "eStudent") return examStudentScreen(v);
-  const box = (t, d, fn) => h("div", { class: "card tap", onclick: fn }, h("div", { class: "b" }, t));
-  return h("div", {}, appBar("ADMIN", null, { menu: accountSettings }),
-    h("div", { class: "pad" },
-      box("Student particulars", "View a student's personal record and download it as PDF.", () => go("pFind", { mode: "view" })),
-      box("Student attendance report", "Search a student or a class, view the attendance report and download PDFs.", () => go("rReports")),
-      box("Student examination database", "View a student's exam results, download PDFs and update the exams database.", () => go("eHome"))));
+  const box = (t, d, fn) => h("div", { class: "card tap adm-card", role: "button", tabindex: "0", onclick: fn, onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fn(); } } }, h("div", { class: "b" }, t));
+  return h("div", { class: "adm" }, appBar("ADMIN", null, { menu: accountSettings, menuLabel: "Menu" }),
+    h("div", { class: "pad" }, h("div", { class: "adm-grid" },
+      box("Student particulars", "", () => go("pFind", { mode: "view" })),
+      box("Student attendance report", "", () => go("rReports")),
+      box("Student examination database", "", () => go("eHome")))));
 }
 const lastCls = (r) => { const e = r.entries[r.entries.length - 1]; return e ? e.cn : ""; };
 const lastYear = (r) => { const e = r.entries[r.entries.length - 1]; return e ? e.y : ""; };
