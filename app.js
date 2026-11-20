@@ -133,12 +133,21 @@ function startData(u) {
   L(doc(db, "config", "leaveRules"), (s) => { const x = s.data(), d = C.DEFAULT_LEAVE_RULES; S.leaveRules = s.exists() ? { thu: Array.isArray(x.thu) ? x.thu : d.thu, fri: Array.isArray(x.fri) ? x.fri : d.fri, sat: Array.isArray(x.sat) ? x.sat : d.sat } : d; render(); });
   L(doc(db, "users", u.uid), (s) => { if (s.exists()) { S.me = mUser(s); render(); } });
   if (u.role === "housemaster" || u.canParticulars || u.canRegistry) L(collection(db, "particulars"), (s) => { S.particulars = {}; for (const d of s.docs) { const x = d.data(); S.particulars[d.id] = { d: x.d || {}, updatedAt: x.updatedAt && x.updatedAt.toDate ? x.updatedAt.toDate() : null, by: x.byName || "" }; } render(); });
-  if (u.role === "housemaster" || u.canRegistry) L(collection(db, "exam_history"), (s) => { S.examHist = {}; for (const d of s.docs) { const x = d.data(); S.examHist[d.id] = { entries: arr(x.entries), name: x.name || "", at: x.importedAt && x.importedAt.toDate ? x.importedAt.toDate() : null }; } render(); });
   if (u.role === "housemaster") L(collection(db, "users"), (s) => { S.users = s.docs.map(mUser); render(); });
+}
+let examOn = false, examTimer = 0;
+/** the exam results are large, so they are loaded only when an exam screen or the import is opened */
+function ensureExamListener() {
+  if (examOn || !S.me || !(S.me.role === "housemaster" || S.me.canRegistry)) return;
+  examOn = true;
+  regs.push(onSnapshot(collection(db, "exam_history"), (s) => {
+    for (const ch of s.docChanges()) { if (ch.type === "removed") { delete S.examHist[ch.doc.id]; continue; } const x = ch.doc.data(); S.examHist[ch.doc.id] = { entries: arr(x.entries), name: x.name || "", at: x.importedAt && x.importedAt.toDate ? x.importedAt.toDate() : null }; }
+    clearTimeout(examTimer); examTimer = setTimeout(render, 250);
+  }, () => {}));
 }
 function stopData() {
   regs.forEach((r) => r()); regs = [];
-  Object.assign(S, { me: null, classes: [], students: [], activities: [], users: [], dutyRules: C.DEFAULT_DUTY_RULES, dutyDays: {}, sportsEx: [], clinic: [], leaves: [], leaveRules: C.DEFAULT_LEAVE_RULES, competitions: [], compResults: [], particulars: {}, examHist: {}, academicYear: C.DEFAULT_ACADEMIC_YEAR, signature: null });
+  examOn = false; Object.assign(S, { me: null, classes: [], students: [], activities: [], users: [], dutyRules: C.DEFAULT_DUTY_RULES, dutyDays: {}, sportsEx: [], clinic: [], leaves: [], leaveRules: C.DEFAULT_LEAVE_RULES, competitions: [], compResults: [], particulars: {}, examHist: {}, academicYear: C.DEFAULT_ACADEMIC_YEAR, signature: null });
   liveStop();
 }
 // sessions for one date / one sheet
@@ -644,18 +653,26 @@ function examCard(st, v) {
     h("button", { class: "o", onclick: () => savePdf(examPdf(st.name, st.cls || clsName(st.classId), rec.entries, { semesters: v.sem }), `exams_${st.name.replace(/[^A-Za-z0-9]+/g, "_")}.pdf`) }, "Export exam results PDF"));
 }
 function examImportDialog() {
+  ensureExamListener();
   modal((close) => {
     const err = h("div", { class: "err" }), file = h("input", { type: "file", accept: ".json,application/json", style: "display:none", onchange: async () => {
       const f = file.files[0]; if (!f) return; err.textContent = "";
-      try { const data = buildHistories(JSON.parse(await f.text())); close(); examPreviewDialog(data); }
+      try {
+        err.className = "muted"; err.textContent = "Reading the backup, please wait..."; await tick();
+        const data = buildHistories(JSON.parse(await f.text()));
+        err.textContent = "Matching names, please wait..."; await tick();
+        const m = matchStudents(S.students.map((s) => ({ id: s.id, name: s.name })), data.names);
+        close(); examPreviewDialog(data, m);
+      }
       catch (e) { err.textContent = e instanceof SyntaxError ? "That file could not be read. Choose the backup file downloaded from the Jamia Exams Database." : (e.message || "Could not read that file."); }
     } });
     return [h("h3", {}, "Import exam results"), h("div", { class: "muted" }, "Choose the backup file from the Jamia Exams Database (jamia-exams-backup-....json). You will see a preview before anything is saved. Nothing in the exams app is changed."), file, err,
       h("div", { class: "row" }, h("button", { class: "o", onclick: close }, "Cancel"), h("div", { class: "grow" }), h("button", { onclick: () => file.click() }, "Choose backup file"))];
   });
 }
-function examPreviewDialog(data) {
-  const active = S.students.filter((s) => s.active), m = matchStudents(S.students.map((s) => ({ id: s.id, name: s.name })), data.names);
+const tick = () => new Promise((r) => setTimeout(r, 30));
+function examPreviewDialog(data, m) {
+  const active = S.students.filter((s) => s.active);
   const activeIds = new Set(active.map((s) => s.id));
   const unmatched = m.unmatched.filter((u) => activeIds.has(u.sid)), sug = m.suggested.filter((u) => activeIds.has(u.sid));
   modal((close) => {
@@ -666,18 +683,21 @@ function examPreviewDialog(data) {
       const items = [...m.matched, ...sug.filter((x) => pick.has(x.sid))];
       const rest = leftovers(data, new Set(items.flatMap((i) => i.ids)));
       try {
+        const total = items.length + rest.length; let done = 0;
         for (let i = 0; i < items.length; i += 200) {
+          go2.textContent = `Saving ${done} of ${total}...`; await tick();
           const b = writeBatch(db);
           for (const it of items.slice(i, i + 200)) {
             const entries = entriesFor(data.hist, it.ids);
             if (entries.length) b.set(doc(db, "exam_history", it.sid), { studentId: it.sid, name: it.ids.map((x) => data.names[x]).join(" / "), entries, importedAt: serverTimestamp(), importedBy: S.me.name });
           }
-          await b.commit();
+          await b.commit(); done += Math.min(200, items.length - i);
         }
         for (let i = 0; i < rest.length; i += 200) {
+          go2.textContent = `Saving ${done} of ${total}...`; await tick();
           const b = writeBatch(db);
           for (const it of rest.slice(i, i + 200)) b.set(doc(db, "exam_history", it.key), { studentId: it.key, name: it.name, entries: entriesFor(data.hist, it.ids), importedAt: serverTimestamp(), importedBy: S.me.name });
-          await b.commit();
+          await b.commit(); done += Math.min(200, rest.length - i);
         }
         close(); toast(`Exam results saved for ${items.length + rest.length} students.`);
       } catch (e) { err.textContent = friendly(e); go2.disabled = false; }
@@ -723,6 +743,7 @@ function examPeople() {
     .map(([k, r]) => { const st = stuById(k); return { key: k, name: st ? st.name : r.name, alt: r.name, cls: lastCls(r), year: lastYear(r), active: st ? st.active : false }; });
 }
 function examHomeScreen(v) {
+  ensureExamListener();
   v.q ??= ""; v.cls ??= null;
   const all = examPeople(), have = all.length;
   const q = v.q.trim().toLowerCase();
@@ -745,6 +766,7 @@ function examHomeScreen(v) {
       rows.length && list.length > rows.length ? h("div", { class: "muted" }, `Showing the first ${rows.length} of ${list.length}. Type more of the name to narrow it down.`) : null));
 }
 function examStudentScreen(v) {
+  ensureExamListener();
   const rec = S.examHist[v.sid], from = v.from;
   if (!rec) return h("div", { class: "pad" }, h("div", { class: "err" }, "Student not found."), h("button", { onclick: () => go("eHome") }, "Back"));
   const st = stuById(v.sid) || { id: v.sid, name: rec.name, cls: lastCls(rec) };
@@ -934,6 +956,7 @@ function recordScreen(v) {
 
 // ---------- More ----------
 function moreTab(v) {
+  ensureExamListener();
   const box = (t, d, ...btns) => h("div", { class: "card" }, h("div", { class: "b" }, t), d ? h("div", { class: "muted" }, d) : null, h("div", { class: "row wrap", style: { marginTop: "8px" } }, btns));
   return h("div", { class: "pad" },
     box("Duty & Permissions", "", h("button", { class: "o", onclick: () => go("sports") }, "Open")),

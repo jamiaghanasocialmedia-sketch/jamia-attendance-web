@@ -80,11 +80,22 @@ export function buildHistories(b) {
 // ---------- matching exam-app students to attendance-app students ----------
 const tokens = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter(Boolean);
 export const keyOf = (s) => tokens(s).sort().join(" ");
-const dice = (a, b) => { const A = new Set(tokens(a)), B = new Set(tokens(b)); if (!A.size || !B.size) return 0; let n = 0; for (const t of A) if (B.has(t)) n++; return 2 * n / (A.size + B.size); };
-/** spelling-tolerant score: compares the letters only (so "Lungipaa" ~ "Lungi Pa"), with the words in either order */
-const bg = (t) => { const m = new Map(); for (let i = 0; i < t.length - 1; i++) { const g = t.slice(i, i + 2); m.set(g, (m.get(g) || 0) + 1); } return m; };
-const cdice = (a, b) => { const x = bg(a), y = bg(b); let n = 0, tx = 0, ty = 0; for (const v of x.values()) tx += v; for (const v of y.values()) ty += v; for (const [g, v] of x) n += Math.min(v, y.get(g) || 0); return tx + ty ? 2 * n / (tx + ty) : 0; };
-const fuzzy = (a, b) => { const ta = tokens(a), tb = tokens(b); return Math.max(dice(a, b), cdice(ta.join(""), tb.join("")), cdice([...ta].sort().join(""), [...tb].sort().join(""))); };
+const bgOf = (t) => { const m = new Map(); for (let i = 0; i < t.length - 1; i++) { const g = t.slice(i, i + 2); m.set(g, (m.get(g) || 0) + 1); } return m; };
+const memo = new Map();
+/** each name is analysed once: words, letters-only forms (words in given order and sorted) and their letter pairs */
+const prep = (s) => {
+  let o = memo.get(s); if (o) return o;
+  const t = tokens(s), a = t.join(""), b = [...t].sort().join("");
+  o = { A: new Set(t), ga: bgOf(a), na: Math.max(0, a.length - 1), gb: bgOf(b), nb: Math.max(0, b.length - 1) };
+  memo.set(s, o); return o;
+};
+const pdice = (x, y, nx, ny) => { if (nx + ny === 0) return 0; let n = 0; for (const [g, v] of x) { const w = y.get(g); if (w) n += v < w ? v : w; } return 2 * n / (nx + ny); };
+/** spelling-tolerant score: words (any order) or letters only (so "Lungipaa" ~ "Lungi Pa") */
+const fuzzy = (a, b) => {
+  const p = prep(a), q = prep(b); let n = 0;
+  if (p.A.size && q.A.size) { for (const t of p.A) if (q.A.has(t)) n++; n = 2 * n / (p.A.size + q.A.size); }
+  return Math.max(n, pdice(p.ga, q.ga, p.na, q.na), pdice(p.gb, q.gb, p.nb, q.nb));
+};
 /** students = [{id,name}], names = {examId: name}. -> { matched:[{sid,name,ids}], suggested:[{sid,name,ids,examName,score}], unmatched:[{sid,name}] } */
 export function matchStudents(students, names) {
   const byKey = {}; for (const [id, n] of Object.entries(names)) (byKey[keyOf(n)] ||= []).push(id);
