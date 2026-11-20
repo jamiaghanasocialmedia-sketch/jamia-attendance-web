@@ -929,8 +929,7 @@ function recordScreen(v) {
       h("div", { class: "muted" }, `${r.entries.length} sheets in this period.`),
       h("div", { class: "muted" }, `Sick: ${r.sick.length} time(s), ${r.sick.filter((x) => x.place === "hospital").length} hospital visit(s).`),
       h("div", { class: "muted" }, `Leave: ${r.leaves.length} time(s), ${r.leaves.reduce((a, l) => a + C.leaveDaysIn(l, r.from, r.to), 0)} day(s) away.`)),
-      h("button", { onclick: () => savePdf(studentPdf(r), `record_${st.name.replace(/[^A-Za-z0-9]+/g, "_")}_${v.from}_to_${v.to}.pdf`) }, "Export PDF")] : null,
-    examCard(st, v)));
+      h("button", { onclick: () => savePdf(studentPdf(r), `record_${st.name.replace(/[^A-Za-z0-9]+/g, "_")}_${v.from}_to_${v.to}.pdf`) }, "Export PDF")] : null));
 }
 
 // ---------- More ----------
