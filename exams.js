@@ -203,13 +203,13 @@ export function examPdf(studentName, className, entries, opts = {}) {
       const card = (x0, w, title, rows, tone) => {
         const bh = 16 + rows.length * 15 + 6; R(x0, y, w, bh, tone); doc.setDrawColor(...SAND); doc.setLineWidth(0.5); doc.rect(x0, y, w, bh, "S");
         T(title.toUpperCase(), x0 + 10, y + 14, { size: 8, bold: true, color: GREEN });
-        rows.forEach((o, i) => { const by = y + 30 + i * 15; T(`${i + 1}.  ${clip(o.n, 9.5, w - 150)}`, x0 + 10, by, { size: 9.5, bold: true }); R(x0 + w - 112, by - 7, 70, 6, [255, 255, 255]); R(x0 + w - 112, by - 7, Math.max(1, 70 * o.avg / 100), 6, tone === GOODBG ? SAGE : [205, 130, 110]); T(`${o.avg.toFixed(1)}%`, x0 + w - 10, by, { size: 9.5, align: "right" }); });
+        rows.forEach((o, i) => { const by = y + 30 + i * 15; T(`${i + 1}.  ${clip(o.n, 9.5, w - 150)}`, x0 + 10, by, { size: 9.5, bold: true }); R(x0 + w - 112, by - 7, 70, 6, [255, 255, 255]); R(x0 + w - 112, by - 7, Math.max(1, 70 * o.avg / 100), 6, tone === GOODBG ? SAGE : [184, 170, 130]); T(`${o.avg.toFixed(1)}%`, x0 + w - 10, by, { size: 9.5, align: "right" }); });
         return bh;
       };
       ensure(150); heading("Subject summary");
-      const gw = (W - 2 * X - 12) / 2, GOODBG = [236, 244, 236];
+      const gw = (W - 2 * X - 12) / 2, GOODBG = [236, 244, 236], LOWBG = [245, 241, 230];
       const h1 = card(X, gw, "Best performing subjects", top, GOODBG);
-      card(X + gw + 12, gw, "Lowest performing subjects", bottom, [250, 238, 232]);
+      card(X + gw + 12, gw, "Lowest performing subjects", bottom, LOWBG);
       y += h1 + 6;
       T("Average % of the marks over the annual results; only subjects taken in at least half of the years are compared.", X, y + 8, { size: 7, italic: true, color: GREY });
       y += 18;
