@@ -139,7 +139,7 @@ export function examPdf(studentName, className, entries, opts = {}) {
       T("STUDENT EXAMINATION REPORT", X, 53, { size: 9, bold: true, color: SAND });
       T(String(studentName).slice(0, 40), X, 78, { size: 21, bold: true, color: CREAM });
       const yrs = list.map((e) => e.y).sort(), last = list[list.length - 1];
-      T(list.length ? `${yrs[0]} to ${yrs[yrs.length - 1]}   |   latest class ${last.cn}     Printed: ${printed}` : `Printed: ${printed}`, X, 92, { size: 9, color: SAND });
+      T(list.length ? `${yrs[0]} to ${yrs[yrs.length - 1]}     Printed: ${printed}` : `Printed: ${printed}`, X, 92, { size: 9, color: SAND });
       y = 116;
     } else y = 36;
   };
