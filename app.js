@@ -728,7 +728,7 @@ function examHomeScreen(v) {
   const q = v.q.trim().toLowerCase();
   const order = (c) => { const i = S.classes.findIndex((x) => x.name === c); return i < 0 ? 999 : i; };
   const clsList = [...new Set(all.map((p) => p.cls).filter(Boolean))].sort((x, y) => order(x) - order(y) || x.localeCompare(y));
-  const list = all.filter((p) => (!v.cls || p.cls === v.cls) && (!q || p.name.toLowerCase().includes(q) || p.alt.toLowerCase().includes(q)))
+  const list = all.filter((p) => (!v.cls || p.cls === v.cls) && (!q || q.split(/\s+/).every((w) => (p.name + " " + p.alt).toLowerCase().includes(w))))
     .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
   const rows = q || v.cls ? list.slice(0, 40) : [];
   return h("div", {}, appBar("Examination database", "Find a student", { back: () => go("home") }),
