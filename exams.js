@@ -177,8 +177,9 @@ export function examPdf(studentName, className, entries, opts = {}) {
     y += 16;
     // best and lowest performing subject (average % of the marks over the annual results)
     const ann = (entries.filter((e) => e.e === "annual").length ? entries.filter((e) => e.e === "annual") : list);
-    const bySub = {};
-    for (const e of ann) for (const sb of e.subs) if (sb.max > 0 && sb.m != null) { const k = sb.n.trim().toLowerCase(); (bySub[k] ||= { n: sb.n.trim(), r: [] }).r.push({ y: e.y, m: sb.m, max: sb.max, p: sb.m / sb.max * 100 }); }
+    const bySub = {}, SKIP = ["arabic muhadithah", "english muhadithah", "urdu muhadithah", "ruhani khazain", "deeni maloomat", "khutbat e imam"]; // not counted in the best/lowest summary
+    const norm = (t) => t.toLowerCase().replace(/[^a-z ]+/g, " ").replace(/\s+/g, " ").trim().replace(/khaza in/, "khazain");
+    for (const e of ann) for (const sb of e.subs) if (sb.max > 0 && sb.m != null && !SKIP.includes(norm(sb.n))) { const k = sb.n.trim().toLowerCase(); (bySub[k] ||= { n: sb.n.trim(), r: [] }).r.push({ y: e.y, m: sb.m, max: sb.max, p: sb.m / sb.max * 100 }); }
     let subs = Object.values(bySub).map((o) => ({ ...o, avg: o.r.reduce((a, x) => a + x.p, 0) / o.r.length }));
     const need = Math.max(2, Math.ceil(Math.max(0, ...subs.map((o) => o.r.length)) / 2)); // judge only subjects taken in at least half of the exams
     if (subs.some((o) => o.r.length >= need)) subs = subs.filter((o) => o.r.length >= need);
