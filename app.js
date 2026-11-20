@@ -211,7 +211,7 @@ function loginView() {
   const submit = () => { if (u.value.trim() && p.value) loginWith(u.value, p.value); };
   p.addEventListener("keydown", (e) => e.key === "Enter" && submit());
   return h("div", { class: "login" },
-    h("h1", {}, "Jamia Attendance"), h("div", { class: "muted" }, "Sign in to continue"),
+    h("h1", {}, "Database"), h("div", { class: "muted" }, "Sign in to continue"),
     saved.length ? [h("div", { class: "b" }, "Saved accounts"), saved.map((a) => h("div", { class: "row" },
       h("button", { class: "o grow", disabled: busy, onclick: async () => { const pw = await Vault.password(a.login); if (pw) loginWith(a.login, pw); else { loginMsg = "Please type the password again."; render(); } } }, a.name || a.login),
       h("button", { class: "t", onclick: () => { Vault.remove(a.login); render(); } }, "Remove"))), h("div", { class: "muted" }, "Or sign in with another account")] : null,
