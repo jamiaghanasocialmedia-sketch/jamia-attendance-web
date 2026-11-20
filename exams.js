@@ -157,13 +157,16 @@ export function examPdf(studentName, className, entries, opts = {}) {
     head();
     rows.forEach((r, i) => {
       if (i === brk) { doc.addPage(); page(false); head(); } else if (ensure(rh)) head();
-      let x = X; if (r.fill !== false && i % 2 === 0) R(X, y, cols.reduce((a, c) => a + c.w, 0), rh, ROW);
+      let x = X; const tw = cols.reduce((a, c) => a + c.w, 0);
+      if (r.total) R(X, y, tw, rh, CREAM); else if (r.fill !== false && i % 2 === 0) R(X, y, tw, rh, ROW);
       cols.forEach((c, k) => {
-        doc.setDrawColor(...SAND); doc.setLineWidth(0.5); doc.rect(x, y, c.w, rh, "S");
-        const v = clip(String(r.c[k] ?? ""), 8.5, c.w - 8);
-        T(v, c.a === "r" ? x + c.w - 4 : x + 4, y + 10.5, { size: 8.5, bold: !!r.bold || (c.b && k === c.bi), align: c.a === "r" ? "right" : "left" });
+        const val = String(r.c[k] ?? ""), v = clip(val, 8.5, c.w - 8);
+        const col = c.status ? (/^fail/i.test(val) ? [178, 34, 34] : /^pass/i.test(val) ? [30, 110, 60] : /^comp/i.test(val) ? [176, 110, 20] : [0, 0, 0]) : [0, 0, 0];
+        T(v, c.a === "r" ? x + c.w - 4 : x + 4, y + 10.5, { size: 8.5, bold: !!r.bold || (c.b && k === c.bi) || (c.status && col[0] !== 0), color: col, align: c.a === "r" ? "right" : "left" });
         x += c.w;
       });
+      doc.setLineWidth(r.total ? 1 : 0.4); doc.setDrawColor(...(r.total ? GREEN : [228, 218, 192])); doc.line(X, y + (r.total ? 0 : rh), X + tw, y + (r.total ? 0 : rh));
+      if (r.total) doc.line(X, y + rh, X + tw, y + rh);
       y += rh;
     });
   };
@@ -171,7 +174,7 @@ export function examPdf(studentName, className, entries, opts = {}) {
 
   // summary
   if (list.length) {
-    const sumCols = [{ l: "Year", w: 55 }, { l: "Class", w: 70 }, { l: "Roll", w: 35 }, { l: "Exam", w: 55 }, { l: "Total", w: 85, a: "r" }, { l: "%", w: 45, a: "r" }, { l: "Position", w: 55 }, { l: "Compartments", w: 80 }, { l: "Remark", w: 55 }];
+    const sumCols = [{ l: "Year", w: 55 }, { l: "Class", w: 70 }, { l: "Roll", w: 35 }, { l: "Exam", w: 55 }, { l: "Total", w: 85, a: "r" }, { l: "%", w: 45, a: "r" }, { l: "Position", w: 55 }, { l: "Compartments", w: 80 }, { l: "Remark", status: true, w: 55 }];
     table(sumCols, list.map((e) => ({ c: [e.y, e.cn + (e.rep ? " (R)" : ""), e.roll, EXAM_NAME[e.e].replace(" Semester", " Sem"), `${fmtMark(e.total)} / ${e.max}`, e.pct.toFixed(2), `${e.pos} of ${e.of}`,
       e.comp.length ? e.comp.map((c) => `${c.n} ${fmtMark(c.m)}`).join(", ") : "-", e.rem ? (e.rem === "Comp." ? "Comp." : e.rem === "Passed after compartment" ? "Pass (comp.)" : e.rem === "Failed compartment" ? "Failed comp." : e.rem) : "-"] })), { preH: 0 });
     y += 16;
@@ -189,12 +192,12 @@ export function examPdf(studentName, className, entries, opts = {}) {
       const card = (x0, w, title, rows, tone) => {
         const bh = 16 + rows.length * 15 + 6; R(x0, y, w, bh, tone); doc.setDrawColor(...SAND); doc.setLineWidth(0.5); doc.rect(x0, y, w, bh, "S");
         T(title.toUpperCase(), x0 + 10, y + 14, { size: 8, bold: true, color: GREEN });
-        rows.forEach((o, i) => { T(`${i + 1}.  ${clip(o.n, 9.5, w - 100)}`, x0 + 10, y + 30 + i * 15, { size: 9.5, bold: true }); T(`${o.avg.toFixed(1)}%`, x0 + w - 10, y + 30 + i * 15, { size: 9.5, align: "right" }); });
+        rows.forEach((o, i) => { const by = y + 30 + i * 15; T(`${i + 1}.  ${clip(o.n, 9.5, w - 150)}`, x0 + 10, by, { size: 9.5, bold: true }); R(x0 + w - 112, by - 7, 70, 6, [255, 255, 255]); R(x0 + w - 112, by - 7, Math.max(1, 70 * o.avg / 100), 6, tone === GOODBG ? SAGE : [205, 130, 110]); T(`${o.avg.toFixed(1)}%`, x0 + w - 10, by, { size: 9.5, align: "right" }); });
         return bh;
       };
       ensure(150); heading("Subject summary");
-      const gw = (W - 2 * X - 12) / 2;
-      const h1 = card(X, gw, "Best performing subjects", top, [236, 244, 236]);
+      const gw = (W - 2 * X - 12) / 2, GOODBG = [236, 244, 236];
+      const h1 = card(X, gw, "Best performing subjects", top, GOODBG);
       card(X + gw + 12, gw, "Lowest performing subjects", bottom, [250, 238, 232]);
       y += h1 + 6;
       T("Average % of the marks over the annual results; only subjects taken in at least half of the years are compared.", X, y + 8, { size: 7, italic: true, color: GREY });
@@ -213,7 +216,7 @@ export function examPdf(studentName, className, entries, opts = {}) {
     }
     // charts
     const chart = (title, labels, vals, o) => {
-      const h = 118; ensure(h + 22); heading(title);
+      const h = 150; ensure(h + 22); heading(title);
       const L = X + 30, Rr = W - X - 12, top = y + 10, bot = y + h - 22, n = vals.length;
       doc.setDrawColor(215, 215, 215); doc.setLineWidth(0.4);
       let lo, hi, ticks;
@@ -246,12 +249,15 @@ export function examPdf(studentName, className, entries, opts = {}) {
       T(`Roll ${e.roll}     Position ${e.pos} of ${e.of}     ${e.pct.toFixed(2)}%     ${e.rem ? (e.rem === "Comp." ? "Compartment" : e.rem) : ""}`, W - X, y + 10, { size: 8.5, align: "right" });
       y += 16;
     };
-    const cols = ann ? [{ l: "Subject", w: 132 }, { l: "Out of", w: 42, a: "r" }, { l: "Pass mark", w: 50, a: "r" }, { l: "Semester 1", w: 62, a: "r" }, { l: "Semester 2", w: 62, a: "r" }, { l: "Average", w: 56, a: "r" }, { l: "Status", w: 44 }, { l: "Teacher", w: 87 }]
-      : [{ l: "Subject", w: 150 }, { l: "Out of", w: 50, a: "r" }, { l: "Pass mark", w: 60, a: "r" }, { l: "Marks", w: 70, a: "r" }, { l: "Status", w: 55 }, { l: "Teacher", w: 150 }];
+    const cols = ann ? [{ l: "Subject", w: 132 }, { l: "Out of", w: 42, a: "r" }, { l: "Pass mark", w: 50, a: "r" }, { l: "Semester 1", w: 62, a: "r" }, { l: "Semester 2", w: 62, a: "r" }, { l: "Average", w: 56, a: "r" }, { l: "Status", w: 44, status: true }, { l: "Teacher", w: 87 }]
+      : [{ l: "Subject", w: 150 }, { l: "Out of", w: 50, a: "r" }, { l: "Pass mark", w: 60, a: "r" }, { l: "Marks", w: 70, a: "r" }, { l: "Status", w: 55, status: true }, { l: "Teacher", w: 150 }];
     const status = (s) => (s.f ? "Fail" : s.pass ? "Pass" : "-");
-    const rows = e.subs.map((s) => ({ c: ann ? [s.n, s.max, s.pass || "-", fmtMark(s.a), fmtMark(s.b), fmtMark(s.m), status(s), s.t || ""] : [s.n, s.max, s.pass || "-", fmtMark(s.m), status(s), s.t || ""] }));
-    rows.push({ bold: true, fill: false, c: ann ? ["Total", e.max, "", "", "", fmtMark(e.total), "", ""] : ["Total", e.max, "", fmtMark(e.total), "", ""] });
-    table(cols, rows, { pre, preH: 22 });
+    const hasT = e.subs.some((x) => x.t); // the teacher column is dropped when no teacher is recorded
+    const cut = (a) => (hasT ? a : a.slice(0, -1));
+    const cols2 = hasT ? cols : cols.slice(0, -1).map((c, i) => (i === 0 ? { ...c, w: c.w + cols[cols.length - 1].w } : c));
+    const rows = e.subs.map((s) => ({ c: cut(ann ? [s.n, s.max, s.pass || "-", fmtMark(s.a), fmtMark(s.b), fmtMark(s.m), status(s), s.t || ""] : [s.n, s.max, s.pass || "-", fmtMark(s.m), status(s), s.t || ""]) }));
+    rows.push({ bold: true, total: true, c: cut(ann ? ["Total", e.max, "", "", "", fmtMark(e.total), "", ""] : ["Total", e.max, "", fmtMark(e.total), "", ""]) });
+    table(cols2, rows, { pre, preH: 22 });
     if (e.comp.length) { T("Compartment papers: " + e.comp.map((c) => `${c.n} ${fmtMark(c.m)} (${c.ok ? "passed" : "failed"})`).join(", "), X, y + 11, { size: 8.5, color: GREY }); y += 14; }
     y += 8;
   }
