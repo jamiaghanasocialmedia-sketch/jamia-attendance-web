@@ -139,7 +139,7 @@ export function examPdf(studentName, className, entries, opts = {}) {
       T("STUDENT EXAMINATION REPORT", X, 53, { size: 9, bold: true, color: SAND });
       T(String(studentName).slice(0, 40), X, 78, { size: 21, bold: true, color: CREAM });
       const yrs = list.map((e) => e.y).sort(), last = list[list.length - 1];
-      T(list.length ? `${list.length} exam${list.length === 1 ? "" : "s"}   |   ${yrs[0]} to ${yrs[yrs.length - 1]}   |   latest class ${last.cn}, roll ${last.roll}     Printed: ${printed}` : `Printed: ${printed}`, X, 92, { size: 9, color: SAND });
+      T(list.length ? `${yrs[0]} to ${yrs[yrs.length - 1]}   |   latest class ${last.cn}     Printed: ${printed}` : `Printed: ${printed}`, X, 92, { size: 9, color: SAND });
       y = 116;
     } else y = 36;
   };
@@ -175,6 +175,29 @@ export function examPdf(studentName, className, entries, opts = {}) {
     table(sumCols, list.map((e) => ({ c: [e.y, e.cn + (e.rep ? " (R)" : ""), e.roll, EXAM_NAME[e.e].replace(" Semester", " Sem"), `${fmtMark(e.total)} / ${e.max}`, e.pct.toFixed(2), `${e.pos} of ${e.of}`,
       e.comp.length ? e.comp.map((c) => `${c.n} ${fmtMark(c.m)}`).join(", ") : "-", e.rem ? (e.rem === "Comp." ? "Comp." : e.rem === "Passed after compartment" ? "Pass (comp.)" : e.rem === "Failed compartment" ? "Failed comp." : e.rem) : "-"] })), { preH: 0 });
     y += 16;
+    // best and lowest performing subject (average % of the marks over the annual results)
+    const ann = (entries.filter((e) => e.e === "annual").length ? entries.filter((e) => e.e === "annual") : list);
+    const bySub = {};
+    for (const e of ann) for (const sb of e.subs) if (sb.max > 0 && sb.m != null) { const k = sb.n.trim().toLowerCase(); (bySub[k] ||= { n: sb.n.trim(), r: [] }).r.push({ y: e.y, m: sb.m, max: sb.max, p: sb.m / sb.max * 100 }); }
+    let subs = Object.values(bySub).map((o) => ({ ...o, avg: o.r.reduce((a, x) => a + x.p, 0) / o.r.length }));
+    const need = Math.max(2, Math.ceil(Math.max(0, ...subs.map((o) => o.r.length)) / 2)); // judge only subjects taken in at least half of the exams
+    if (subs.some((o) => o.r.length >= need)) subs = subs.filter((o) => o.r.length >= need);
+    if (subs.length >= 2) {
+      const best = subs.reduce((a, b) => (b.avg > a.avg ? b : a)), low = subs.reduce((a, b) => (b.avg < a.avg ? b : a));
+      const card = (x0, w, title, o, hi, tone) => {
+        const bh = 64; R(x0, y, w, bh, tone); doc.setDrawColor(...SAND); doc.setLineWidth(0.5); doc.rect(x0, y, w, bh, "S");
+        T(title.toUpperCase(), x0 + 10, y + 14, { size: 8, bold: true, color: GREEN });
+        T(o.n, x0 + 10, y + 32, { size: 13, bold: true });
+        const pick = o.r.reduce((a, b) => ((hi ? b.p > a.p : b.p < a.p) ? b : a));
+        T(`Average ${o.avg.toFixed(1)}% over ${o.r.length} exam${o.r.length === 1 ? "" : "s"}`, x0 + 10, y + 46, { size: 8.5, color: GREY });
+        T(`${hi ? "Highest" : "Lowest"}: ${fmtMark(pick.m)} / ${pick.max} (${pick.y})`, x0 + 10, y + 58, { size: 8.5, color: GREY });
+      };
+      ensure(100); heading("Subject summary");
+      const gw = (W - 2 * X - 12) / 2;
+      card(X, gw, "Best performing subject", best, true, [236, 244, 236]);
+      card(X + gw + 12, gw, "Lowest performing subject", low, false, [250, 238, 232]);
+      y += 64 + 16;
+    }
     // charts
     const chart = (title, labels, vals, o) => {
       const h = 118; ensure(h + 22); heading(title);
