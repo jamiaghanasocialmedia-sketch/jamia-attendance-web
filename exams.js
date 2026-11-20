@@ -234,31 +234,8 @@ export function examPdf(studentName, className, entries, opts = {}) {
     chart("Percentage", labels, list.map((e) => e.pct), { fmt: (v) => v.toFixed(1) + "%" });
   }
 
-  // subject x year grid, coloured by performance
-  if (list.length) {
-    const ga = (entries.filter((e) => e.e === "annual").length ? entries.filter((e) => e.e === "annual") : list);
-    const yrs = [...new Set(ga.map((e) => e.y))], names = [], cell = {};
-    for (const e of ga) for (const sb of e.subs) if (sb.max > 0 && sb.m != null) { const k = sb.n.trim(); if (!names.includes(k)) names.push(k); cell[k + "|" + e.y] = sb.m / sb.max * 100; }
-    if (names.length && yrs.length) {
-      const rh = 14, labW = 130, cw = Math.min(54, (W - 2 * X - labW) / yrs.length), gw = labW + cw * yrs.length;
-      if (y + 40 + (names.length + 1) * rh > H - 40) { doc.addPage(); page(false); }
-      heading("Subject performance by year");
-      const tone = (v) => (v >= 90 ? [120, 190, 130] : v >= 80 ? [178, 220, 170] : v >= 70 ? [240, 232, 160] : v >= 60 ? [247, 200, 140] : [238, 150, 140]);
-      R(X, y, gw, 16, GREEN); T("Subject", X + 4, y + 11, { size: 8, bold: true, color: [255, 255, 255] });
-      yrs.forEach((yr, i) => T(yr, X + labW + cw * i + cw / 2, y + 11, { size: 7.5, bold: true, color: [255, 255, 255], align: "center" }));
-      y += 16;
-      names.forEach((nm) => {
-        if (y + rh > H - 40) { doc.addPage(); page(false); }
-        doc.setDrawColor(...SAND); doc.setLineWidth(0.5); doc.rect(X, y, labW, rh, "S");
-        T(clip(nm, 8, labW - 8), X + 4, y + 10, { size: 8 });
-        yrs.forEach((yr, i) => { const v = cell[nm + "|" + yr], x0 = X + labW + cw * i; if (v != null) R(x0, y, cw, rh, tone(v)); doc.rect(x0, y, cw, rh, "S"); if (v != null) T(v.toFixed(0), x0 + cw / 2, y + 10, { size: 8, align: "center" }); });
-        y += rh;
-      });
-      y += 6;
-      [[90, "90+"], [80, "80-89"], [70, "70-79"], [60, "60-69"], [0, "below 60"]].forEach(([v, lb], i) => { const x0 = X + i * 72; R(x0, y, 10, 8, tone(v === 0 ? 0 : v)); T(lb, x0 + 14, y + 7, { size: 7, color: GREY }); });
-      y += 22;
-    }
-  }
+  // the overview above has page 1 to itself; the exam-by-exam tables start on the next page
+  if (list.length) { doc.addPage(); page(false); }
 
   // one table per exam
   for (const e of list) {
