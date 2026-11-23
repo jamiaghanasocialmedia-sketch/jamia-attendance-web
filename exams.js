@@ -139,7 +139,7 @@ export function examPdf(studentName, className, entries, opts = {}) {
   const T = (s, x, y, o = {}) => { doc.setFont("helvetica", o.bold ? "bold" : o.italic ? "italic" : "normal"); doc.setFontSize(o.size || 9); doc.setTextColor(...(o.color || [0, 0, 0])); doc.text(ascii(s), x, y, { align: o.align || "left" }); };
   const R = (x, y, w, h, c) => { doc.setFillColor(...c); doc.rect(x, y, w, h, "F"); };
   const clip = (s, size, w) => { doc.setFont("helvetica", "normal"); doc.setFontSize(size); const l = doc.splitTextToSize(ascii(s), w); return l.length > 1 ? l[0].replace(/\s*\S?$/, "") + "..." : (l[0] || ""); };
-  const now = new Date(), printed = `${now.getDate()} ${MON[now.getMonth()]} ${now.getFullYear()}`;
+  
   let y = 0;
   const page = (first) => {
     R(0, 0, W, H, [255, 255, 255]);
@@ -150,7 +150,7 @@ export function examPdf(studentName, className, entries, opts = {}) {
       T("STUDENT EXAMINATION REPORT", X, 53, { size: 9, bold: true, color: SAND });
       T(String(studentName).slice(0, 40), X, 78, { size: 21, bold: true, color: CREAM });
       const yrs = list.map((e) => e.y).sort(), last = list[list.length - 1];
-      T(list.length ? `${yrs[0]} to ${yrs[yrs.length - 1]}     Printed: ${printed}` : `Printed: ${printed}`, X, 92, { size: 9, color: SAND });
+      if (list.length) T(`${yrs[0]} to ${yrs[yrs.length - 1]}`, X, 92, { size: 9, color: SAND });
       y = 116;
     } else y = 36;
   };

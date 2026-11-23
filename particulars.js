@@ -1,5 +1,5 @@
 // Student particulars: the form definition (used by the entry form, the viewer and the PDF) and the PDF itself.
-// t = text | area | date | yn | choice.  when(d) hides a field that does not apply (e.g. date of Bai'at for an Ahmadi by birth).
+// t = text | area | date | yn | choice | combo (typed value, or one of the quick choices in opts).  when(d) hides a field that does not apply (e.g. date of Bai'at for an Ahmadi by birth).
 const yes = (k) => (d) => d[k] === "yes", no = (k) => (d) => d[k] === "no";
 export const SECTIONS = [
   { id: "personal", title: "1. Personal Information", fields: [
@@ -21,6 +21,7 @@ export const SECTIONS = [
     { k: "localJamaat", l: "Name of local Jama'at", t: "text" },
     { k: "jamaatRegion", l: "Region and country of Jama'at", t: "text" },
     { k: "jamaatNo", l: "Jama'at membership number (if applicable)", t: "text" },
+    { k: "wasiyyat", l: "Wasiyyat No.", t: "combo", opts: ["Applied", "-"] },
     { k: "waqfeNau", l: "Are you a member of the Waqf-e-Nau scheme?", t: "yn" },
     { k: "waqfeNauRef", l: "Waqf-e-Nau reference number", t: "text", when: yes("waqfeNau") },
     { k: "heldOffice", l: "Have you held any office or responsibility in the Jama'at?", t: "yn" },

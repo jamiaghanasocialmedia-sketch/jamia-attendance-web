@@ -792,7 +792,61 @@ function partHomeScreen() {
     h("div", { class: "pad" },
       box("Enter Record", "Search a student, fill in the form and save.", () => go("pFind", { mode: "enter" })),
       box("View Record", "Search a student, open the record and export it as PDF.", () => go("pFind", { mode: "view" })),
+      isReg() ? null : box("Import Records", "Load records typed in the offline entry app (a .json file).", partImportDialog),
       h("div", { class: "muted" }, `${filled} of ${total} students have a record.`)));
+}
+const PART_KEYS = new Set(SECTIONS.flatMap((s) => s.fields.map((f) => f.k)));
+function partImportDialog() {
+  modal((close) => {
+    const err = h("div", { class: "err" }), file = h("input", { type: "file", accept: ".json,application/json", style: "display:none", onchange: async () => {
+      const f = file.files[0]; if (!f) return; err.className = "err"; err.textContent = "";
+      try {
+        const j = JSON.parse(await f.text());
+        if (!j || j.format !== "jamia-particulars" || !Array.isArray(j.records)) throw new Error("That is not a file exported from the offline particulars app.");
+        const recs = j.records.map((r) => { const d = {}; for (const [k, v] of Object.entries(r.d || {})) if (PART_KEYS.has(k) && v != null && String(v).trim() !== "") d[k] = String(v).trim(); return { name: String(r.name || d.fullName || "").trim(), d }; }).filter((r) => r.name && Object.keys(r.d).length);
+        if (!recs.length) throw new Error("The file has no records in it.");
+        err.className = "muted"; err.textContent = "Matching names, please wait..."; await tick();
+        const names = {}; recs.forEach((r, i) => (names[i] = r.name));
+        const m = matchStudents(S.students.filter((s) => s.active).map((s) => ({ id: s.id, name: s.name })), names);
+        close(); partImportPreview(recs, m);
+      } catch (e) { err.className = "err"; err.textContent = e instanceof SyntaxError ? "That file could not be read." : (e.message || "Could not read that file."); }
+    } });
+    return [h("h3", {}, "Import records"), h("div", { class: "muted" }, "Choose the file exported from the offline particulars app. You will see a preview before anything is saved. Fields already filled in are kept unless the file has a new answer for them."), file, err,
+      h("div", { class: "row" }, h("button", { class: "o", onclick: close }, "Cancel"), h("div", { class: "grow" }), h("button", { onclick: () => file.click() }, "Choose file"))];
+  });
+}
+function partImportPreview(recs, m) {
+  const used = new Set([...m.matched, ...m.suggested].flatMap((x) => x.ids));
+  const left = recs.map((r, i) => [r, i]).filter(([, i]) => !used.has(String(i)) && !used.has(i)).map(([r]) => r.name);
+  modal((close) => {
+    const pick = new Set(m.suggested.filter((x) => x.score >= 0.8).map((x) => x.sid)), err = h("div", { class: "err" });
+    const body = h("div", {}), go2 = h("button", { onclick: async () => {
+      go2.disabled = true; err.textContent = "";
+      const items = [...m.matched, ...m.suggested.filter((x) => pick.has(x.sid))];
+      try {
+        for (let i = 0; i < items.length; i += 200) {
+          go2.textContent = `Saving ${i} of ${items.length}...`; await tick();
+          const b = writeBatch(db);
+          for (const it of items.slice(i, i + 200)) {
+            const merged = { ...((S.particulars[it.sid] || {}).d || {}) };
+            for (const id of it.ids) Object.assign(merged, recs[+id].d);
+            b.set(doc(db, "particulars", it.sid), { studentId: it.sid, d: merged, updatedAt: serverTimestamp(), byUid: S.me.uid, byName: S.me.name });
+          }
+          await b.commit();
+        }
+        close(); toast(`Imported ${items.length} record${items.length === 1 ? "" : "s"}.`); render();
+      } catch (e) { err.textContent = friendly(e); go2.disabled = false; go2.textContent = "Import"; }
+    } }, "Import");
+    const draw = () => {
+      body.replaceChildren(
+        h("div", { class: "b" }, `${m.matched.length} matched exactly`),
+        m.suggested.length ? h("div", { class: "muted" }, "Possible matches (tick the ones that are right):") : null,
+        ...m.suggested.map((x) => h("label", { class: "row" }, h("input", { type: "checkbox", checked: pick.has(x.sid), onchange: (e) => { e.target.checked ? pick.add(x.sid) : pick.delete(x.sid); } }), h("div", { class: "grow" }, `${recs[+x.ids[0]].name}  ->  ${x.name}`))),
+        left.length ? h("div", { class: "muted" }, `Not matched to any student, so skipped (${left.length}): ` + left.slice(0, 25).join(", ") + (left.length > 25 ? "..." : "")) : null);
+    };
+    draw();
+    return [h("h3", {}, "Import preview"), body, err, h("div", { class: "row" }, h("button", { class: "o", onclick: close }, "Cancel"), h("div", { class: "grow" }), go2)];
+  });
 }
 function partFind(v) {
   const enter = v.mode === "enter";
@@ -844,6 +898,9 @@ function partForm(v) {
       : fd.t === "date" ? h("input", { type: "date", value: val, onchange: (e) => (f[fd.k] = e.target.value) })
       : fd.t === "yn" ? chips([["yes", "Yes"], ["no", "No"]], val, pick)
       : fd.t === "choice" ? chips(fd.opts.map((o) => [o, o]), val, pick)
+      : fd.t === "combo" ? h("div", { class: "pf" },
+          h("input", { type: "text", autocomplete: "off", placeholder: "Type the number, or choose below", "data-k": dk, value: val, oninput: (e) => { f[fd.k] = e.target.value; } }),
+          chips(fd.opts.map((o) => [o, o === "-" ? "None (-)" : o]), fd.opts.includes(val) ? val : null, pick))
       : h("input", { type: "text", inputmode: fd.mode || null, autocomplete: "off", "data-k": dk, value: val, oninput: (e) => (f[fd.k] = e.target.value) });
     return h("div", { class: "pf" }, h("div", { class: "muted" }, fd.l), ctl);
   };
